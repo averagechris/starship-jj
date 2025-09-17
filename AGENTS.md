@@ -7,6 +7,9 @@
 - Clippy: `cargo clippy --all-targets -- -D warnings`
 - Supply-chain: `cargo deny check`; Audit: `cargo audit`
 - Upstream helpers: `just upstream`; rebase: `just rebase-upstream`
+- Upstream changes: `just upstream-changes` (deps/locks diffstat + full code diff)
+- LLM review prompt: `just llm-review-upstream` (prints agent prompt + upstream diffs)
+- Supply-chain review: `just llm-review-supply-chain` (prints supply-chain prompt + manifest/lock diffs)
 - JSON schema: `cargo run --features json-schema -- starship prompt` (prints to stdout; redirect to `schema.json` if needed)
 - Imports: order `std`, external crates, `jj_*`/others, then `crate::`/`super::`; avoid `*` imports
 - Formatting: use rustfmt defaults; keep small focused modules like current layout
