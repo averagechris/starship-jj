@@ -1,3 +1,5 @@
+> Note: This is a private fork maintained by @averagechris. For the official upstream project, see:
+> https://gitlab.com/lanastara_foss/starship-jj
 # jj-starship
 
 starship plugin for jj
