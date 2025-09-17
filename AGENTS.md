@@ -1,0 +1,20 @@
+# AGENTS: starship-jj Quick Guide
+- Build: `cargo build --locked` (or `nix develop -c cargo build`)
+- Run: `cargo run -- starship prompt` to print the prompt for the current repo
+- Tests: none yet; add `#[cfg(test)]` near code. Run all: `cargo test`
+- Single test: `cargo test <filter>` or exact: `cargo test -- --exact <name>`
+- Format: `cargo fmt --all --check`; fix with `cargo fmt --all`
+- Clippy: `cargo clippy --all-targets -- -D warnings`
+- Supply-chain: `cargo deny check`; Audit: `cargo audit`
+- Upstream helpers: `just upstream`; rebase: `just rebase-upstream`
+- JSON schema: `cargo run --features json-schema -- starship prompt` (prints to stdout; redirect to `schema.json` if needed)
+- Imports: order `std`, external crates, `jj_*`/others, then `crate::`/`super::`; avoid `*` imports
+- Formatting: use rustfmt defaults; keep small focused modules like current layout
+- Types: prefer explicit types on public items; borrow over clone; use `Option`/`Result` patterns
+- Naming: snake_case funcs/vars/modules; UpperCamelCase types/enums; SCREAMING_SNAKE_CASE consts
+- Errors: return `Result<T, jj_cli::command_error::CommandError>`; use `user_error`/`CommandError::with_message` with proper `CommandErrorKind`
+- Avoid: `.unwrap()`/`.expect()` in non-tests; avoid `println!`; write via `Ui` or passed `Write`
+- Features: keep `#[cfg(feature = "json-schema")]` isolated; no schema types in default builds
+- CLI: extend via `clap` subcommands mirroring `StarshipCommands`; document env vars
+- Dependencies: don’t add `anyhow`/`thiserror`/`tracing` unless agreed; stick to current stack
+- Contrib: use `jj` (not git); conventional commits; run fmt, clippy, deny, audit before PR; no Cursor/Copilot rules present
