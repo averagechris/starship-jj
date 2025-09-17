@@ -81,6 +81,7 @@
             rustDevToolchain
             cargo-audit
             cargo-deny
+            just
           ];
           inputsFrom = [ self.packages."${system}".default ];
         };
