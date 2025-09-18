@@ -1,5 +1,8 @@
-> Note: This is a private fork maintained by @averagechris. For the official upstream project, see:
+> Note: This is a fork maintained by @averagechris. For the official upstream project, see:
 > https://gitlab.com/lanastara_foss/starship-jj
+> This fork is not published to crates.io, but is meant to be consumed via nix flake.
+> Behavior is mostly compatible with upstream, but there are some opinionated performance improving
+> changes. AI assistance has been used in making these performance changes.
 # jj-starship
  
 starship plugin for jj

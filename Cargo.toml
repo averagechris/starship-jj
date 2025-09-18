@@ -1,14 +1,14 @@
 [package]
 name = "starship-jj"
-version = "0.6.0"
+version = "1.0.0"
 description = "starship plugin for jj"
 resolver = "3"
 edition = "2024"
-authors = ["Lilly Mannhal <lilly.mannhal@gmail.com>"]
+authors = ["Lilly Mannhal <lilly.mannhal@gmail.com>", "Chris Cummings <chris@thesogu.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://gitlab.com/lanastara_foss/starship-jj"
-repository = "https://gitlab.com/lanastara_foss/starship-jj"
+homepage = "https://git.sr.ht/~averagechris/starship-jj"
+repository = "https://git.sr.ht/~averagechris/starship-jj"
 keywords = [
   "command-line-tool",
   "jj",
