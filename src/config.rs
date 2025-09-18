@@ -97,6 +97,64 @@ fn default_search_depth() -> usize {
 }
 
 impl Config {
+    // Apply targeted SJJ__* env var overrides without scanning the full environment
+    pub fn apply_env_overrides_from_env(&mut self) -> Result<(), CommandError> {
+        use std::env;
+
+        if let Ok(v) = env::var("SJJ__MODULE_SEPARATOR") {
+            self.global.module_separator = v;
+        }
+        if let Ok(v) = env::var("SJJ__TIMEOUT") {
+            let parsed: u64 = v.parse().map_err(|_| {
+                jj_cli::command_error::user_error(
+                    "Invalid SJJ__TIMEOUT (expected integer milliseconds)",
+                )
+            })?;
+            self.global.timeout = Some(parsed);
+        }
+        if let Ok(v) = env::var("SJJ__RESET_COLOR") {
+            let b = match v.trim().to_ascii_lowercase().as_str() {
+                "1" | "true" | "yes" | "on" => true,
+                "0" | "false" | "no" | "off" => false,
+                _ => {
+                    return Err(jj_cli::command_error::user_error(
+                        "Invalid SJJ__RESET_COLOR (use true/false)",
+                    ));
+                }
+            };
+            self.global.reset_color = b;
+        }
+        if let Ok(v) = env::var("SJJ__BOOKMARKS__SEARCH_DEPTH") {
+            let parsed: usize = v.parse().map_err(|_| {
+                jj_cli::command_error::user_error(
+                    "Invalid SJJ__BOOKMARKS__SEARCH_DEPTH (expected unsigned integer)",
+                )
+            })?;
+            self.global.bookmarks.search_depth = parsed;
+        }
+        if let Ok(v) = env::var("SJJ__BOOKMARKS__EXCLUDE") {
+            let parts = v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty());
+            #[cfg(not(feature = "json-schema"))]
+            {
+                let mut globs: Vec<Glob> = Vec::new();
+                for pat in parts.clone() {
+                    globs.push(Glob::try_from(pat).map_err(|e| {
+                        jj_cli::command_error::user_error(format!(
+                            "Invalid glob in SJJ__BOOKMARKS__EXCLUDE: {pat} ({e})"
+                        ))
+                    })?);
+                }
+                self.global.bookmarks.exclude = globs;
+            }
+            #[cfg(feature = "json-schema")]
+            {
+                self.global.bookmarks.exclude = parts.map(|s| s.to_string()).collect();
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn print(
         &self,
         command_helper: &&jj_cli::cli_util::CommandHelper,

@@ -74,6 +74,8 @@
       {
         packages.default = self.packages."${system}".starship-jj;
         packages.starship-jj = rustPackage ./. [ ];
+        # Variant with dotenv feature enabled (opt-in for dev/testing)
+        packages.starship-jj-dotenv = rustPackage ./. [ "dotenv" ];
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
@@ -83,11 +85,24 @@
             cargo-deny
             just
           ];
-          inputsFrom = [ self.packages."${system}".default ];
+          inputsFrom = [ self.packages."${system}".starship-jj ];
+        };
+        # Dev shell that prebuilds the dotenv-enabled variant; you can still
+        # toggle at cargo time with `--features dotenv`.
+        devShells.dotenv = pkgs.mkShell {
+          packages = with pkgs; [
+            rust-analyzer
+            rustDevToolchain
+            cargo-audit
+            cargo-deny
+            just
+          ];
+          inputsFrom = [ self.packages."${system}".starship-jj-dotenv ];
         };
       }
     )
     // {
       overlays.default = final: prev: { inherit (self.packages."${prev.system}") starship-jj; };
     };
-}
+  }
+

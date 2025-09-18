@@ -6,7 +6,6 @@ use std::{
     sync::Arc,
 };
 
-use ::config::Environment;
 use args::{ConfigCommands, CustomCommand, StarshipCommands};
 use config::BookmarkConfig;
 use etcetera::BaseStrategy as _;
@@ -107,51 +106,16 @@ fn print_prompt(
     command_helper: &CommandHelper,
     config_path: &Option<PathBuf>,
 ) -> Result<(), CommandError> {
-    let _ = dotenvy::dotenv();
-    let mut b = ::config::Config::builder();
-
-    if let Some(config_path) = config_path {
-        b = b.add_source(::config::File::new(
-            config_path.to_str().ok_or(CommandError::new(
-                jj_cli::command_error::CommandErrorKind::User,
-                "Invalid Config Path",
-            ))?,
-            ::config::FileFormat::Toml,
-        ));
-    } else {
-        let config_dir = get_config_path()?;
-        if std::fs::exists(&config_dir)? {
-            b = b.add_source(::config::File::new(&config_dir, ::config::FileFormat::Toml));
-        } else {
-            b = b.add_source(
-                ::config::Config::try_from(&config::Config::default())
-                    .expect("Config not serializable?"),
-            );
+    // Load .env only when opted-in via feature and dev/explicit request
+    #[cfg(feature = "dotenv")]
+    {
+        if cfg!(debug_assertions) || std::env::var_os("STARSHIP_JJ_USE_DOTENV").is_some() {
+            let _ = dotenvy::dotenv();
         }
-    };
+    }
 
-    b = b.add_source(
-        Environment::with_prefix("SJJ")
-            .separator("__")
-            .prefix_separator("__")
-            .try_parsing(true),
-    );
-
-    let c = b.build().map_err(|err| {
-        CommandError::with_message(
-            jj_cli::command_error::CommandErrorKind::User,
-            "Failed to parse Config",
-            err,
-        )
-    })?;
-
-    let config: config::Config = c.try_deserialize().map_err(|err| {
-        CommandError::with_message(
-            jj_cli::command_error::CommandErrorKind::User,
-            "Failed to parse Config",
-            err,
-        )
-    })?;
+    let mut config = load_config_file(config_path)?;
+    config.apply_env_overrides_from_env()?;
 
     let mut state = State::default();
     let mut data = JJData::default();
@@ -159,6 +123,25 @@ fn print_prompt(
     config.print(&command_helper, &mut state, &mut data)?;
 
     Ok(())
+}
+
+fn load_config_file(config_path: &Option<PathBuf>) -> Result<config::Config, CommandError> {
+    use std::io::Read as _;
+
+    let p: PathBuf = if let Some(p) = config_path {
+        p.clone()
+    } else {
+        PathBuf::from(get_config_path()?)
+    };
+
+    if std::fs::exists(&p)? {
+        let mut s = String::new();
+        let mut f = std::fs::File::open(&p)?;
+        f.read_to_string(&mut s)?;
+        Ok(toml::from_str::<config::Config>(&s).map_err(user_error)?)
+    } else {
+        Ok(config::Config::default())
+    }
 }
 
 fn prune_by_best_depth(depth: usize, bookmarks: &BTreeMap<String, usize>) -> bool {
