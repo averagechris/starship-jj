@@ -6,6 +6,10 @@
 # jj-starship
  
 starship plugin for jj
+
+## Screenshot
+
+![starship-jj prompt](static/straship-jj-in-action-2025-09-17-1.0.jpg)
  
 ## Features
  
