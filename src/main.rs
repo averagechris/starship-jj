@@ -1,26 +1,21 @@
-use std::{
-    collections::{BTreeMap, HashSet},
-    io::Write,
-    path::PathBuf,
-    process::ExitCode,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, io::Write, path::PathBuf, process::ExitCode};
 
 use args::{ConfigCommands, CustomCommand, StarshipCommands};
-use config::BookmarkConfig;
+// use config::BookmarkConfig;
 use etcetera::BaseStrategy as _;
 use jj_cli::{
     cli_util::{CliRunner, CommandHelper},
     command_error::{CommandError, user_error},
     ui::Ui,
 };
-use jj_lib::{backend::CommitId, store::Store, view::View};
+// use jj_lib::{backend::CommitId, store::Store, view::View};
 
 pub use state::State;
 use unicode_width::UnicodeWidthStr as _;
 
 mod args;
 mod config;
+mod search;
 mod state;
 
 pub mod built_info {
@@ -144,68 +139,6 @@ fn load_config_file(config_path: &Option<PathBuf>) -> Result<config::Config, Com
     }
 }
 
-fn prune_by_best_depth(depth: usize, bookmarks: &BTreeMap<String, usize>) -> bool {
-    let best_depth = bookmarks.values().min().copied().unwrap_or(usize::MAX);
-    depth >= best_depth
-}
-
-fn find_parent_bookmarks(
-    commit_id: &CommitId,
-    depth: usize,
-    config: &BookmarkConfig,
-    bookmarks: &mut BTreeMap<String, usize>,
-    view: &View,
-    store: &Arc<Store>,
-    visited: &mut HashSet<CommitId>,
-) -> Result<(), CommandError> {
-    if !visited.insert(commit_id.clone()) {
-        return Ok(());
-    }
-
-    // Prune search if we've already found a bookmark at a shallower depth
-    if prune_by_best_depth(depth, bookmarks) {
-        return Ok(());
-    }
-
-    let tmp: Vec<_> = view
-        .local_bookmarks_for_commit(commit_id)
-        .map(|(name, _)| name)
-        .collect();
-
-    if !tmp.is_empty() {
-        'bookmark: for bookmark in tmp {
-            let bookmark = bookmark.as_str();
-            for glob in &config.exclude {
-                #[cfg(not(feature = "json-schema"))]
-                if glob.matches(bookmark) {
-                    continue 'bookmark;
-                }
-            }
-            let bookmark = bookmark.to_string();
-            bookmarks
-                .entry(bookmark)
-                .and_modify(|v| {
-                    if *v > depth {
-                        *v = depth
-                    }
-                })
-                .or_insert(depth);
-        }
-        return Ok(());
-    }
-
-    if depth >= config.search_depth {
-        return Ok(());
-    }
-
-    let commit = store.get_commit(commit_id)?;
-
-    for p in commit.parent_ids() {
-        find_parent_bookmarks(p, depth + 1, config, bookmarks, view, store, visited)?;
-    }
-    Ok(())
-}
-
 fn main() -> ExitCode {
     let start = std::time::Instant::now();
     let print_timing = std::env::var("STARSHIP_JJ_TIMING").is_ok();
@@ -293,7 +226,6 @@ pub mod testutil {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::{BTreeMap, HashMap, HashSet};
 
     #[test]
     fn get_config_path_suffix_and_utf8() {
@@ -301,145 +233,6 @@ mod tests {
         assert!(p.ends_with("starship-jj/starship-jj.toml") || p.ends_with("starship-jj.toml"));
         // String already implies valid UTF-8; also ensure not empty
         assert!(!p.is_empty());
-    }
-
-    #[test]
-    fn prune_by_best_depth_basic() {
-        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
-        assert!(!prune_by_best_depth(0, &bookmarks));
-
-        bookmarks.insert("a".to_string(), 3);
-        assert!(!prune_by_best_depth(2, &bookmarks));
-        assert!(prune_by_best_depth(3, &bookmarks));
-        assert!(prune_by_best_depth(4, &bookmarks));
-    }
-
-    // A simple traversal harness to validate best-depth pruning without jj repo types.
-    fn traverse(
-        id: &'static str,
-        depth: usize,
-        cfg: &crate::config::BookmarkConfig,
-        bookmarks: &mut BTreeMap<String, usize>,
-        graph: &HashMap<&'static str, Vec<&'static str>>, // child -> parents
-        marks: &HashMap<&'static str, Vec<&'static str>>, // commit -> bookmark names
-        visited: &mut HashSet<&'static str>,
-    ) {
-        if !visited.insert(id) {
-            return;
-        }
-        if prune_by_best_depth(depth, bookmarks) {
-            return;
-        }
-        if let Some(names) = marks.get(id) {
-            for name in names {
-                let name = (*name).to_string();
-                bookmarks
-                    .entry(name)
-                    .and_modify(|v| {
-                        if *v > depth {
-                            *v = depth
-                        }
-                    })
-                    .or_insert(depth);
-            }
-            return;
-        }
-        if depth >= cfg.search_depth {
-            return;
-        }
-        if let Some(parents) = graph.get(id) {
-            for &p in parents {
-                traverse(p, depth + 1, cfg, bookmarks, graph, marks, visited);
-            }
-        }
-    }
-
-    #[test]
-    fn pruning_stops_other_branch_after_near_bookmark() {
-        let cfg = crate::config::BookmarkConfig {
-            search_depth: 10,
-            ..Default::default()
-        };
-
-        // Ensure we hit the bookmarked parent first to establish best depth = 1
-        let graph: HashMap<_, _> = HashMap::from([
-            ("A", vec!["C", "B"]),
-            ("B", vec!["D"]),
-            ("C", vec![]),
-            ("D", vec![]),
-        ]);
-        let marks: HashMap<_, _> = HashMap::from([("C", vec!["x"])]);
-
-        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
-        let mut visited: HashSet<&'static str> = HashSet::new();
-
-        traverse("A", 0, &cfg, &mut bookmarks, &graph, &marks, &mut visited);
-
-        assert_eq!(bookmarks.get("x"), Some(&1));
-        // The non-bookmarked branch B is seen at depth 1 but not expanded to D
-        assert!(visited.contains("B"));
-        assert!(!visited.contains("D"));
-    }
-
-    #[test]
-    fn traversal_obeys_search_depth_cutoff() {
-        let cfg = crate::config::BookmarkConfig {
-            search_depth: 1,
-            ..Default::default()
-        };
-        let graph: HashMap<_, _> =
-            HashMap::from([("A", vec!["B"]), ("B", vec!["C"]), ("C", vec![])]);
-        let marks: HashMap<_, _> = HashMap::from([("C", vec!["far"])]);
-        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
-        let mut visited: HashSet<&'static str> = HashSet::new();
-        traverse("A", 0, &cfg, &mut bookmarks, &graph, &marks, &mut visited);
-        // With depth cutoff at 1, C at depth 2 is not reached
-        assert!(bookmarks.is_empty());
-    }
-
-    #[test]
-    fn traversal_respects_exclude_globs() {
-        let mut cfg = crate::config::BookmarkConfig {
-            search_depth: 3,
-            ..Default::default()
-        };
-        #[cfg(not(feature = "json-schema"))]
-        {
-            cfg.exclude = vec![crate::config::util::Glob::try_from("r/*").unwrap()];
-        }
-        #[cfg(feature = "json-schema")]
-        {
-            cfg.exclude = vec!["r/*".to_string()];
-        }
-        let graph: HashMap<_, _> =
-            HashMap::from([("A", vec!["B"]), ("B", vec!["C"]), ("C", vec![])]);
-        // Note: our local traverse() does not implement exclude. We'll simulate exclusion by
-        // filtering marks before inserting into the map.
-        let raw_marks: HashMap<_, _> = HashMap::from([("C", vec!["r/blocked", "ok"])]);
-        let filtered_marks: HashMap<_, _> = raw_marks
-            .iter()
-            .map(|(k, vs)| {
-                let filtered: Vec<&'static str> = vs
-                    .iter()
-                    .copied()
-                    .filter(|name| !name.starts_with("r/"))
-                    .collect();
-                (*k, filtered)
-            })
-            .collect();
-        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
-        let mut visited: HashSet<&'static str> = HashSet::new();
-        traverse(
-            "A",
-            0,
-            &cfg,
-            &mut bookmarks,
-            &graph,
-            &filtered_marks,
-            &mut visited,
-        );
-        // Only non-excluded bookmark should be recorded
-        assert_eq!(bookmarks, BTreeMap::from([(String::from("ok"), 2)]));
     }
 
     #[test]

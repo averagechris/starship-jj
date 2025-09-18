@@ -143,7 +143,7 @@ impl Bookmarks {
             return Ok(());
         };
 
-        crate::find_parent_bookmarks(
+        crate::search::find_parent_bookmarks(
             commit_id,
             0,
             &global.bookmarks,
