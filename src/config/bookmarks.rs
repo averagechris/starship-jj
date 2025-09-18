@@ -156,6 +156,29 @@ impl Bookmarks {
         data.bookmarks = Some(bookmarks);
         Ok(())
     }
+
+    #[cfg(test)]
+    pub(crate) fn parse_impl<FHasId, FFill>(
+        &self,
+        data: &mut crate::JJData,
+        has_commit_id: FHasId,
+        fill: FFill,
+    ) -> Result<(), CommandError>
+    where
+        FHasId: FnOnce() -> bool,
+        FFill: FnOnce(&mut BTreeMap<String, usize>) -> Result<(), CommandError>,
+    {
+        if data.bookmarks.is_some() {
+            return Ok(());
+        }
+        if !has_commit_id() {
+            return Ok(());
+        }
+        let mut map = BTreeMap::new();
+        fill(&mut map)?;
+        data.bookmarks = Some(map);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -256,5 +279,37 @@ mod tests {
         let mut out = Vec::new();
         b.print(&mut out, &data, "/").unwrap();
         assert_eq!(strip_ansi(&out), "\"a\"/");
+    }
+
+    #[test]
+    fn bookmarks_parse_impl_sets_once_and_short_circuits() {
+        let b = Bookmarks::default();
+        let mut data = crate::JJData::default();
+        let mut calls = 0usize;
+        b.parse_impl(
+            &mut data,
+            || true,
+            |m| {
+                calls += 1;
+                m.insert("a".to_string(), 0);
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(calls, 1);
+        assert_eq!(data.bookmarks.as_ref().unwrap().get("a"), Some(&0));
+
+        // Second call should not invoke fill
+        b.parse_impl(&mut data, || true, |_| panic!("should not be called"))
+            .unwrap();
+    }
+
+    #[test]
+    fn bookmarks_parse_impl_skips_when_no_commit_id() {
+        let b = Bookmarks::default();
+        let mut data = crate::JJData::default();
+        b.parse_impl(&mut data, || false, |_| unreachable!())
+            .unwrap();
+        assert!(data.bookmarks.is_none());
     }
 }

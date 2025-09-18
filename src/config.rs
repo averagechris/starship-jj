@@ -118,6 +118,15 @@ impl Config {
             });
         }
         let mut io = std::io::stdout();
+
+        // Preload repo/commit/commit_id/tree/parent_tree once for modules.
+        // Preloading commit_id is mostly for symmetry; load_commit() calls it.
+        state.load_repo(command_helper)?;
+        state.load_commit_id(command_helper)?; // small/no win; symmetry with other preloads
+        state.load_commit(command_helper)?;
+        state.load_parent_tree(command_helper)?;
+        state.load_tree(command_helper)?;
+
         for module in self.modules.iter() {
             match module {
                 ModuleConfig::Bookmarks(bookmarks) => {

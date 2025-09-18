@@ -111,6 +111,19 @@ impl Commit {
             data.commit.desc = Some(d);
         }
     }
+
+    #[cfg(test)]
+    fn parse_impl<F>(&self, data: &mut crate::JJData, get_desc: F) -> Result<(), CommandError>
+    where
+        F: FnOnce() -> Option<String>,
+    {
+        if data.commit.desc.is_some() {
+            return Ok(());
+        }
+        let desc = get_desc();
+        self.set_desc_if_missing(data, desc);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -188,5 +201,23 @@ mod tests {
         let mut data2 = crate::JJData::default();
         c.set_desc_if_missing(&mut data2, None);
         assert!(data2.commit.desc.is_none());
+    }
+
+    #[test]
+    fn commit_parse_impl_sets_and_short_circuits() {
+        let c = Commit::default();
+        let mut data = crate::JJData::default();
+        let mut called = false;
+        c.parse_impl(&mut data, || {
+            called = true;
+            Some("msg".to_string())
+        })
+        .unwrap();
+        assert!(called);
+        assert_eq!(data.commit.desc.as_deref(), Some("msg"));
+
+        // Second call should not invoke the closure when desc is already set
+        c.parse_impl(&mut data, || panic!("should not be called"))
+            .unwrap();
     }
 }
