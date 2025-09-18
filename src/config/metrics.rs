@@ -200,14 +200,26 @@ impl Metrics {
             return Ok(());
         }
 
+        // Optimization: if template doesn't reference added/removed, avoid computing line stats.
+        let needs_added = self.template.contains("{added}");
+        let needs_removed = self.template.contains("{removed}");
+        let needs_lines = needs_added || needs_removed;
+
         let Some(stats) = state.diff_stats(command_helper)? else {
             return Ok(());
         };
 
+        let files_changed = stats.entries().len();
+        let (lines_added, lines_removed) = if needs_lines {
+            (stats.count_total_added(), stats.count_total_removed())
+        } else {
+            (0, 0)
+        };
+
         let diff = crate::CommitDiff {
-            files_changed: stats.entries().len(),
-            lines_added: stats.count_total_added(),
-            lines_removed: stats.count_total_removed(),
+            files_changed,
+            lines_added,
+            lines_removed,
         };
 
         data.commit.diff = Some(diff);

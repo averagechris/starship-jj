@@ -164,26 +164,43 @@ fn print_ansi_truncated(
     name: &str,
     surround_with_quotes: bool,
 ) -> Result<(), CommandError> {
+    use unicode_width::UnicodeWidthChar as _;
+
     let maybe_quotes = if surround_with_quotes { "\"" } else { "" };
 
     match max_length {
-        Some(max_len) if name.width() > max_len => {
-            let ansi_max_len = name
-                .char_indices()
-                .map(|(i, _)| i)
-                .take_while(|i| name[..*i].width() < max_len)
-                .last()
-                .unwrap_or_default();
+        Some(max_len) => {
+            // Only truncate if total display width exceeds max_len
+            if name.width() <= max_len {
+                write!(io, "{maybe_quotes}{name}{maybe_quotes}")?;
+                return Ok(());
+            }
+            // Fast path: zero max length always truncates to just the ellipsis
+            if max_len == 0 {
+                write!(io, "{}…{}", maybe_quotes, maybe_quotes)?;
+                return Ok(());
+            }
 
-            write!(
-                io,
-                "{}{}…{}",
-                maybe_quotes,
-                &name[..ansi_max_len],
-                maybe_quotes
-            )?;
+            // Walk characters once, keeping last byte index where prefix width < max_len
+            let mut acc_width = 0usize;
+            let mut cut_byte = 0usize; // prefix start
+            for (i, ch) in name.char_indices() {
+                if acc_width < max_len {
+                    cut_byte = i; // prefix up to i has width < max_len
+                }
+                acc_width += ch.width().unwrap_or(0);
+                if acc_width >= max_len {
+                    break;
+                }
+            }
+
+            if cut_byte < name.len() {
+                write!(io, "{}{}…{}", maybe_quotes, &name[..cut_byte], maybe_quotes)?;
+            } else {
+                write!(io, "{maybe_quotes}{name}{maybe_quotes}")?;
+            }
         }
-        _ => {
+        None => {
             write!(io, "{maybe_quotes}{name}{maybe_quotes}")?;
         }
     }

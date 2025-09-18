@@ -31,9 +31,10 @@ pub struct State {
 
 impl State {
     pub fn workspace(&mut self, command_helper: &CommandHelper) -> Result<&Workspace> {
-        let workspace = command_helper.load_workspace()?;
-        self.workspace = Some(workspace);
-
+        if self.workspace.is_none() {
+            let workspace = command_helper.load_workspace()?;
+            self.workspace = Some(workspace);
+        }
         let Some(w) = self.workspace.as_ref() else {
             unreachable!()
         };

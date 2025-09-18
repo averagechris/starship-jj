@@ -30,12 +30,12 @@ pub(crate) fn find_parent_bookmarks(
             continue;
         }
 
-        let names: Vec<_> = view
+        let mut names = view
             .local_bookmarks_for_commit(&cid)
             .map(|(name, _)| name)
-            .collect();
+            .peekable();
 
-        if !names.is_empty() {
+        if names.peek().is_some() {
             let mut inserted_any = false;
             'bookmark: for bookmark in names {
                 let bookmark = bookmark.as_str();

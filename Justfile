@@ -1,5 +1,9 @@
 # https://github.com/casey/just
 
+# Default: list tasks
+default:
+	@just --list
+
 # Fetch from upstream and update local tracking bookmarks
 upstream:
 	jj git fetch --remote upstream
@@ -127,3 +131,18 @@ ci: fmt-check clippy test-all deny audit
 
 # run lints that fix the things they find
 lint: fmt clippy-fix
+
+# Dev run
+run:
+	cargo run -- starship prompt
+
+# Release build via nix
+release-build:
+	nix build .#
+
+# Run release via Nix
+run-release: release-build
+	nix run .# -- starship prompt
+
+# compiles the release build, in the future will make changelog and tags etc
+release: release-build
