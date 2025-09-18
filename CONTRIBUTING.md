@@ -18,3 +18,15 @@
 
 * Due to legal, ethical, logistical and other issues with LLMs I will not accept code that has been written primarily by AI.
 * Minor AI assistance may be permissable but undisclosed major AI contribution will get you banned from contributing in the future.
+
+## Testing locally (pre-PR)
+
+* Unit tests: `just test` (fast; runs crate unit tests only)
+* Integration tests: `just itest` (requires `jj` in PATH; snapshots in `tests/snapshots/`)
+* Full suite: `just test-all`
+* Snapshot changes:
+  * Install helper: `cargo install cargo-insta`
+  * Review/accept: `cargo insta review` (then commit updated `.snap` files)
+* Notes:
+  * Integration tests initialize repos via `jj git init` and skip if `jj` is not installed.
+  * Prompt snapshots are stabilized with `SJJ__MODULE_SEPARATOR="|"` and `SJJ__RESET_COLOR=false`.

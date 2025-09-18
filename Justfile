@@ -99,6 +99,14 @@ clippy-fix:
 	cargo clippy --fix --allow-dirty --all-targets -- -D warnings
 
 test:
+	cargo test --bin starship-jj
+
+# Integration tests only
+itest:
+	cargo test --tests
+
+# Full test suite (unit + integration + doc)
+test-all:
 	cargo test
 
 # Supply-chain: cargo-deny
@@ -114,7 +122,7 @@ check: fmt-check clippy
 	@:
 
 # Full CI: format check, clippy, tests, deny & audit
-ci: fmt-check clippy test deny audit
+ci: fmt-check clippy test-all deny audit
 	@echo "ok: ci checks passed"
 
 # run lints that fix the things they find

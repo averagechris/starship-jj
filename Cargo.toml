@@ -46,3 +46,9 @@ const_format="0.2.34"
 [build-dependencies]
 built={version="0.8", features=["git2"]}
 
+[dev-dependencies]
+insta = { version = "1", features = ["filters"] }
+assert_cmd = "2"
+assert_fs = "1"
+regex = "1"
+which = "6"

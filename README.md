@@ -131,3 +131,15 @@ Notes:
 
 Rationale: Starship invokes this binary frequently; disabling implicit `.env` and broad env scanning avoids unnecessary work at each prompt draw while keeping explicit overrides and dev ergonomics.
 
+## Testing
+
+- Unit tests: `just test` (fast, runs crate unit tests only)
+- Integration tests: `just itest` (runs tests in `tests/`; requires `jj` in `PATH`)
+- Full suite: `just test-all`
+- Snapshot review (when outputs change):
+  - Install helper: `cargo install cargo-insta`
+  - Review/accept: `cargo insta review`
+  - Snapshots live in `tests/snapshots/` (`.snap` files). New results appear as `.snap.new`.
+- Notes for integration tests:
+  - Tests initialize repos with `jj git init` and skip if `jj` isn’t available.
+  - Tests set `SJJ__MODULE_SEPARATOR="|"` and `SJJ__RESET_COLOR=false` for stable prompt output.

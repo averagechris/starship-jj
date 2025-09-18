@@ -1,7 +1,7 @@
 # AGENTS: starship-jj Quick Guide
 - Build: `cargo build --locked` (or `nix develop -c cargo build`)
 - Run: `cargo run -- starship prompt` to print the prompt for the current repo
-- Tests: none yet; add `#[cfg(test)]` near code. Run all: `cargo test`
+- Tests: unit `just test`; integration `just itest` (needs `jj`); all `just test-all`
 - Single test: `cargo test <filter>` or exact: `cargo test -- --exact <name>`
 - Format: `cargo fmt --all --check`; fix with `cargo fmt --all`
 - Clippy: `cargo clippy --all-targets -- -D warnings`
