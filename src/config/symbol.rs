@@ -59,3 +59,20 @@ fn default_style() -> Style {
 fn default_symbol() -> String {
     "󱗆 ".to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::strip_ansi;
+
+    #[test]
+    fn symbol_prints_symbol_and_separator() {
+        let s = Symbol::default();
+        let mut out = Vec::new();
+        s.print(&mut out, &crate::JJData::default(), "/").unwrap();
+        assert_eq!(
+            strip_ansi(&out),
+            format!("{}{}", super::default_symbol(), "/")
+        );
+    }
+}

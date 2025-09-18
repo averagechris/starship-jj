@@ -199,6 +199,25 @@ mod tests {
 
         assert_eq!(strip_ansi(&buf), "");
     }
+
+    #[test]
+    fn default_module_order_and_reset_color() {
+        let cfg = Config::default();
+        let names: Vec<&str> = cfg
+            .modules
+            .iter()
+            .map(|m| match m {
+                ModuleConfig::Symbol(_) => "Symbol",
+                ModuleConfig::Bookmarks(_) => "Bookmarks",
+                ModuleConfig::Commit(_) => "Commit",
+                ModuleConfig::State(_) => "State",
+                ModuleConfig::Metrics(_) => "Metrics",
+            })
+            .collect();
+        assert_eq!(names, ["Symbol", "Bookmarks", "Commit", "State", "Metrics"]);
+        assert_eq!(cfg.global.module_separator, super::default_separator());
+        assert!(cfg.global.reset_color);
+    }
 }
 
 /// A module that prints some info about the current jj repo
@@ -220,7 +239,7 @@ impl Default for Config {
                 timeout: Default::default(),
                 module_separator: default_separator(),
                 bookmarks: Default::default(),
-                reset_color: Default::default(),
+                reset_color: default_reset_color(),
             },
             modules: default_modules(),
         }

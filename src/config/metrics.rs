@@ -252,6 +252,41 @@ mod print_tests {
         let err = m.print(&mut out, &data, "/").unwrap_err();
         let _ = err; // only assert it errors without depending on exact message
     }
+
+    #[test]
+    fn metric_format_plain_outputs() {
+        let m = Metrics::default();
+        let added = m
+            .added_lines
+            .format(10, &m.style, super::default_added_style());
+        assert_eq!(strip_ansi(added.as_bytes()), "+10");
+        let removed = m
+            .removed_lines
+            .format(2, &m.style, super::default_removed_style());
+        assert_eq!(strip_ansi(removed.as_bytes()), "-2");
+        let changed = m
+            .changed_files
+            .format(3, &m.style, super::default_changed_style());
+        assert_eq!(strip_ansi(changed.as_bytes()), "3");
+    }
+}
+
+#[cfg(test)]
+mod parse_more_tests {
+    use super::*;
+
+    #[test]
+    fn parse_short_circuits_when_diff_already_present() {
+        let m = Metrics::default();
+        let mut data = crate::JJData::default();
+        data.commit.diff = Some(crate::CommitDiff {
+            files_changed: 1,
+            ..Default::default()
+        });
+        m.parse_impl(&mut data, || unreachable!(), || unreachable!())
+            .unwrap();
+        assert_eq!(data.commit.diff.as_ref().unwrap().files_changed, 1);
+    }
 }
 
 #[cfg(test)]

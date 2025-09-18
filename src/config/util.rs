@@ -153,3 +153,51 @@ impl From<colored::Color> for Color {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn style_print_defaults_are_reset_codes() {
+        let mut out = Vec::new();
+        Style::default().print(&mut out, None).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "\x1B[39;49m");
+    }
+
+    #[test]
+    fn style_format_uses_fallback_when_fields_missing() {
+        let s = Style::default();
+        let fallback = Style {
+            color: Some(Color::Red),
+            bg_color: None,
+        };
+        let formatted = s.format(fallback);
+        assert_eq!(formatted, "\x1B[31;49m");
+    }
+
+    #[test]
+    fn glob_matches_and_invalid_patterns() {
+        let g = Glob::try_from("r/*").unwrap();
+        assert!(g.matches("r/x"));
+        assert!(!g.matches("x/r"));
+        assert!(Glob::try_from("[").is_err());
+    }
+
+    #[test]
+    fn color_roundtrip_basic_and_truecolor() {
+        // Basic color mapping via pattern match
+        let c = Color::from(colored::Color::Red);
+        match c {
+            Color::Red => {}
+            other => panic!("Unexpected color: {:?}", other),
+        }
+        // TrueColor roundtrip
+        let cc: colored::Color = Color::TrueColor { r: 1, g: 2, b: 3 }.into();
+        let back: Color = cc.into();
+        match back {
+            Color::TrueColor { r: 1, g: 2, b: 3 } => {}
+            other => panic!("Unexpected color: {:?}", other),
+        }
+    }
+}

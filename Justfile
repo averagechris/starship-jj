@@ -97,3 +97,19 @@ clippy:
 
 test:
 	cargo test
+
+# Supply-chain: cargo-deny
+deny:
+	cargo deny check
+
+# Security audit: cargo-audit
+audit:
+	cargo audit
+
+# Run formatter check and clippy
+check: fmt-check clippy
+	@:
+
+# Full CI: format check, clippy, tests, deny & audit
+ci: fmt-check clippy test deny audit
+	@echo "ok: ci checks passed"

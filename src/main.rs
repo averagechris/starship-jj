@@ -313,6 +313,14 @@ mod tests {
     use std::collections::{BTreeMap, HashMap, HashSet};
 
     #[test]
+    fn get_config_path_suffix_and_utf8() {
+        let p = get_config_path().unwrap();
+        assert!(p.ends_with("starship-jj/starship-jj.toml") || p.ends_with("starship-jj.toml"));
+        // String already implies valid UTF-8; also ensure not empty
+        assert!(!p.is_empty());
+    }
+
+    #[test]
     fn prune_by_best_depth_basic() {
         let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
         assert!(!prune_by_best_depth(0, &bookmarks));

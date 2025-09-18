@@ -248,4 +248,13 @@ mod tests {
         b.print(&mut out, &data, "/").unwrap();
         assert_eq!(strip_ansi(&out), "alpha⇡2 beta⇡2 zeta⇡2/");
     }
+
+    #[test]
+    fn bookmarks_quotes_default_is_on() {
+        let b = Bookmarks::default();
+        let data = mk_data(&[("a", 0)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "\"a\"/");
+    }
 }

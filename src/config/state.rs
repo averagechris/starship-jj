@@ -124,12 +124,12 @@ impl State {
         module_separator: &str,
     ) -> Result<(), CommandError> {
         let mut first = true;
-        if let Some(true) = data.commit.warnings.conflict {
+        if !self.conflict.disabled && matches!(data.commit.warnings.conflict, Some(true)) {
             self.conflict.style.print(io, None)?;
             first = false;
             write!(io, "{}", self.conflict.text)?;
         }
-        if let Some(true) = data.commit.warnings.divergent {
+        if !self.divergent.disabled && matches!(data.commit.warnings.divergent, Some(true)) {
             if !first {
                 write!(io, "{}", self.separator)?;
             }
@@ -137,7 +137,7 @@ impl State {
             self.divergent.style.print(io, None)?;
             write!(io, "{}", self.divergent.text)?;
         }
-        if let Some(true) = data.commit.warnings.hidden {
+        if !self.hidden.disabled && matches!(data.commit.warnings.hidden, Some(true)) {
             if !first {
                 write!(io, "{}", self.separator)?;
             }
@@ -145,7 +145,7 @@ impl State {
             self.hidden.style.print(io, None)?;
             write!(io, "{}", self.hidden.text)?;
         }
-        if let Some(true) = data.commit.warnings.immutable {
+        if !self.immutable.disabled && matches!(data.commit.warnings.immutable, Some(true)) {
             if !first {
                 write!(io, "{}", self.separator)?;
             }
@@ -153,7 +153,7 @@ impl State {
             self.immutable.style.print(io, None)?;
             write!(io, "{}", self.immutable.text)?;
         }
-        if let Some(true) = data.commit.warnings.empty {
+        if !self.empty.disabled && matches!(data.commit.warnings.empty, Some(true)) {
             if !first {
                 write!(io, "{}", self.separator)?;
             }
@@ -258,6 +258,29 @@ mod tests {
     fn state_prints_nothing_when_all_flags_empty() {
         let s = State::default();
         let data = crate::JJData::default();
+        let mut out = Vec::new();
+        s.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+
+    #[test]
+    fn state_prints_two_flags_with_separator_and_module_end() {
+        let s = State::default();
+        let mut data = crate::JJData::default();
+        data.commit.warnings.divergent = Some(true);
+        data.commit.warnings.hidden = Some(true);
+        let mut out = Vec::new();
+        s.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "(DIVERGENT) (HIDDEN)/");
+    }
+
+    #[test]
+    fn disabled_hidden_is_not_rendered() {
+        let mut s = State::default();
+        // Access private field since test module is in the same file/module
+        s.hidden.disabled = true;
+        let mut data = crate::JJData::default();
+        data.commit.warnings.hidden = Some(true);
         let mut out = Vec::new();
         s.print(&mut out, &data, "/").unwrap();
         assert_eq!(strip_ansi(&out), "");
