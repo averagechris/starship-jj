@@ -95,6 +95,9 @@ fmt-check:
 clippy:
 	cargo clippy --all-targets -- -D warnings
 
+clippy-fix:
+	cargo clippy --fix --allow-dirty --all-targets -- -D warnings
+
 test:
 	cargo test
 
@@ -113,3 +116,6 @@ check: fmt-check clippy
 # Full CI: format check, clippy, tests, deny & audit
 ci: fmt-check clippy test deny audit
 	@echo "ok: ci checks passed"
+
+# run lints that fix the things they find
+lint: fmt clippy-fix
