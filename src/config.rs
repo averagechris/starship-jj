@@ -117,7 +117,6 @@ impl Config {
                 }
             });
         }
-        let mut io = std::io::stdout();
 
         // Preload repo/commit/commit_id/tree/parent_tree once for modules.
         // Preloading commit_id is mostly for symmetry; load_commit() calls it.
@@ -127,38 +126,53 @@ impl Config {
         state.load_parent_tree(command_helper)?;
         state.load_tree(command_helper)?;
 
+        // Render the entire prompt into an in-memory buffer first to minimize I/O.
+        // Heuristic preallocation: this is a micro-optimization to reduce the
+        // number of Vec reallocations for typical prompt sizes. The numbers here
+        // are intentionally conservative and not critical for correctness.
+        let sep_len = self.global.module_separator.len();
+        let n = self.modules.len();
+        // Assume ~128 bytes per module plus separators and optional reset code (~8 bytes).
+        let approx_capacity = n
+            .saturating_mul(128)
+            .saturating_add(sep_len.saturating_mul(n.saturating_sub(1)))
+            .saturating_add(if self.global.reset_color { 8 } else { 0 });
+        let mut buf: Vec<u8> = Vec::with_capacity(approx_capacity);
+
         for module in self.modules.iter() {
             match module {
                 ModuleConfig::Bookmarks(bookmarks) => {
                     bookmarks.parse(command_helper, state, data, &self.global)?;
-                    let mut io = io.lock();
-                    bookmarks.print(&mut io, data, &self.global.module_separator)?;
+                    bookmarks.print(&mut buf, data, &self.global.module_separator)?;
                 }
                 ModuleConfig::Commit(commit_desc) => {
                     commit_desc.parse(command_helper, state, data, &self.global)?;
-                    let mut io = io.lock();
-                    commit_desc.print(&mut io, data, &self.global.module_separator)?
+                    commit_desc.print(&mut buf, data, &self.global.module_separator)?
                 }
                 ModuleConfig::State(commit_warnings) => {
                     commit_warnings.parse(command_helper, state, data, &self.global)?;
-                    let mut io = io.lock();
-                    commit_warnings.print(&mut io, data, &self.global.module_separator)?
+                    commit_warnings.print(&mut buf, data, &self.global.module_separator)?
                 }
                 ModuleConfig::Metrics(commit_diff) => {
                     commit_diff.parse(command_helper, state, data, &self.global)?;
-                    let mut io = io.lock();
-                    commit_diff.print(&mut io, data, &self.global.module_separator)?
+                    commit_diff.print(&mut buf, data, &self.global.module_separator)?
                 }
                 ModuleConfig::Symbol(symbol) => {
                     symbol.parse(command_helper, state, data, &self.global)?;
-                    let mut io = io.lock();
-                    symbol.print(&mut io, data, &self.global.module_separator)?
+                    symbol.print(&mut buf, data, &self.global.module_separator)?
                 }
             }
         }
         if self.global.reset_color {
-            util::Style::default().print(&mut io, None)?;
+            // Note: If the escape sequence length changes in the future, this only
+            // affects the preallocation hint above; the buffer will grow as needed.
+            util::Style::default().print(&mut buf, None)?;
         }
+
+        // Write once to stdout under a single lock.
+        let mut out = std::io::stdout().lock();
+        out.write_all(&buf)?;
+
         Ok(())
     }
 
