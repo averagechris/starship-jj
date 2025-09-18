@@ -157,3 +157,95 @@ impl Bookmarks {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::testutil::strip_ansi;
+
+    fn mk_data(map: &[(&str, usize)]) -> crate::JJData {
+        crate::JJData {
+            bookmarks: Some(map.iter().map(|(k, v)| ((*k).to_string(), *v)).collect()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn bookmarks_sorted_by_distance_then_name() {
+        let b = Bookmarks {
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = mk_data(&[("b", 1), ("a", 0), ("c", 1)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "a b⇡1 c⇡1/");
+    }
+
+    #[test]
+    fn bookmarks_respects_max_and_prints_ellipsis_once() {
+        let b = Bookmarks {
+            max_bookmarks: Some(2),
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = mk_data(&[("a", 0), ("b", 1), ("c", 2)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "a b⇡1…/");
+    }
+
+    #[test]
+    fn bookmarks_truncation_and_no_quotes() {
+        let b = Bookmarks {
+            max_length: Some(3),
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = mk_data(&[("abcdef", 0)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "ab…/");
+    }
+
+    #[test]
+    fn bookmarks_without_behind_symbol() {
+        let b = Bookmarks {
+            behind_symbol: None,
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = mk_data(&[("b", 2)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "b2/");
+    }
+
+    #[test]
+    fn bookmarks_prints_nothing_when_empty_map() {
+        let b = Bookmarks {
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = crate::JJData {
+            bookmarks: Some(std::collections::BTreeMap::new()),
+            ..Default::default()
+        };
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+
+    #[test]
+    fn bookmarks_alpha_order_three_same_distance() {
+        let b = Bookmarks {
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let data = mk_data(&[("zeta", 2), ("alpha", 2), ("beta", 2)]);
+        let mut out = Vec::new();
+        b.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "alpha⇡2 beta⇡2 zeta⇡2/");
+    }
+}

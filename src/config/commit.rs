@@ -102,3 +102,63 @@ impl Commit {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::strip_ansi;
+
+    #[test]
+    fn prints_first_line_only() {
+        let mut data = crate::JJData::default();
+        data.commit.desc = Some("first line\nsecond".to_string());
+        let c = Commit::default();
+        let mut out = Vec::new();
+        c.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "\"first line\"/");
+    }
+
+    #[test]
+    fn prints_empty_fallback_when_no_description() {
+        let mut data = crate::JJData::default();
+        data.commit.desc = Some("".to_string());
+        let c = Commit::default();
+        let mut out = Vec::new();
+        c.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "\"(no description set)\"/");
+    }
+
+    #[test]
+    fn truncates_and_quotes_respected() {
+        let mut data = crate::JJData::default();
+        data.commit.desc = Some("abcdef".to_string());
+        let c = Commit {
+            max_length: Some(3),
+            surround_with_quotes: false,
+            ..Default::default()
+        };
+        let mut out = Vec::new();
+        c.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "ab…/");
+    }
+
+    #[test]
+    fn commit_prints_nothing_when_desc_is_none() {
+        let mut data = crate::JJData::default();
+        data.commit.desc = None;
+        let c = Commit::default();
+        let mut out = Vec::new();
+        c.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+
+    #[test]
+    fn carriage_return_split_is_respected() {
+        let mut data = crate::JJData::default();
+        data.commit.desc = Some("first\rsecond".to_string());
+        let c = Commit::default();
+        let mut out = Vec::new();
+        c.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "\"first\"/");
+    }
+}

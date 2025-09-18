@@ -217,6 +217,44 @@ impl Metrics {
 }
 
 #[cfg(test)]
+mod print_tests {
+    use super::*;
+    use crate::testutil::strip_ansi;
+
+    #[test]
+    fn prints_numbers_into_template() {
+        let m = Metrics::default();
+        let mut data = crate::JJData::default();
+        data.commit.diff = Some(crate::CommitDiff {
+            files_changed: 3,
+            lines_added: 10,
+            lines_removed: 2,
+        });
+        let mut out = Vec::new();
+        m.print(&mut out, &data, "/").unwrap();
+        let text = strip_ansi(&out);
+        assert!(text.contains("["));
+        assert!(text.contains("3"));
+        assert!(text.contains("+10"));
+        assert!(text.contains("-2"));
+        assert!(text.ends_with("/"));
+    }
+
+    #[test]
+    fn invalid_template_returns_error() {
+        let m = Metrics {
+            template: "{{{{".to_string(),
+            ..Default::default()
+        };
+        let mut data = crate::JJData::default();
+        data.commit.diff = Some(crate::CommitDiff::default());
+        let mut out = Vec::new();
+        let err = m.print(&mut out, &data, "/").unwrap_err();
+        let _ = err; // only assert it errors without depending on exact message
+    }
+}
+
+#[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SimpleStats {
     files_changed: usize,
@@ -261,7 +299,7 @@ impl Metrics {
 }
 
 #[cfg(test)]
-mod tests {
+mod parse_tests {
     use super::*;
 
     #[test]

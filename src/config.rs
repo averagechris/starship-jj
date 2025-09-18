@@ -154,6 +154,53 @@ impl Config {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::strip_ansi;
+
+    #[test]
+    fn config_print_no_output_when_modules_emit_nothing_and_reset_off() {
+        // Construct config without Symbol module, since Symbol always prints.
+        let cfg = Config {
+            global: GlobalConfig {
+                module_separator: super::default_separator(),
+                timeout: None,
+                bookmarks: Default::default(),
+                reset_color: false,
+            },
+            modules: vec![
+                ModuleConfig::Bookmarks(Default::default()),
+                ModuleConfig::Commit(Default::default()),
+                ModuleConfig::State(Default::default()),
+                ModuleConfig::Metrics(Default::default()),
+            ],
+        };
+
+        // Simulate printing modules directly with no data; each should emit nothing (after stripping ANSI).
+        let data = crate::JJData {
+            bookmarks: Some(std::collections::BTreeMap::new()),
+            ..Default::default()
+        };
+        let module_sep = &cfg.global.module_separator;
+        let mut buf = Vec::new();
+        if let ModuleConfig::Bookmarks(b) = &cfg.modules[0] {
+            b.print(&mut buf, &data, module_sep).unwrap_or(());
+        }
+        if let ModuleConfig::Commit(c) = &cfg.modules[1] {
+            c.print(&mut buf, &data, module_sep).unwrap_or(());
+        }
+        if let ModuleConfig::State(s) = &cfg.modules[2] {
+            s.print(&mut buf, &data, module_sep).unwrap_or(());
+        }
+        if let ModuleConfig::Metrics(m) = &cfg.modules[3] {
+            m.print(&mut buf, &data, module_sep).unwrap_or(());
+        }
+
+        assert_eq!(strip_ansi(&buf), "");
+    }
+}
+
 /// A module that prints some info about the current jj repo
 #[cfg_attr(feature = "json-schema", derive(JsonSchema))]
 #[derive(Deserialize, Serialize, Debug)]

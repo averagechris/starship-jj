@@ -232,3 +232,34 @@ impl State {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::strip_ansi;
+
+    #[test]
+    fn prints_in_order_with_separators_and_module_sep() {
+        let s = State::default();
+        let mut data = crate::JJData::default();
+        data.commit.warnings.conflict = Some(true);
+        data.commit.warnings.divergent = Some(true);
+        data.commit.warnings.hidden = Some(true);
+        data.commit.warnings.immutable = Some(true);
+        data.commit.warnings.empty = Some(true);
+
+        let mut out = Vec::new();
+        s.print(&mut out, &data, "/").unwrap();
+        let text = strip_ansi(&out);
+        assert!(text.starts_with("(CONFLICT) (DIVERGENT) (HIDDEN) (IMMUTABLE) (EMPTY)/"));
+    }
+
+    #[test]
+    fn state_prints_nothing_when_all_flags_empty() {
+        let s = State::default();
+        let data = crate::JJData::default();
+        let mut out = Vec::new();
+        s.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+}

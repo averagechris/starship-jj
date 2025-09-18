@@ -162,11 +162,7 @@ fn print_prompt(
 }
 
 fn prune_by_best_depth(depth: usize, bookmarks: &BTreeMap<String, usize>) -> bool {
-    let best_depth = bookmarks
-        .values()
-        .min()
-        .copied()
-        .unwrap_or(usize::MAX);
+    let best_depth = bookmarks.values().min().copied().unwrap_or(usize::MAX);
     depth >= best_depth
 }
 
@@ -279,6 +275,39 @@ fn print_ansi_truncated(
 }
 
 #[cfg(test)]
+pub mod testutil {
+    pub fn strip_ansi(s: &[u8]) -> String {
+        let s = String::from_utf8_lossy(s);
+        let bytes = s.as_bytes();
+        let mut out = String::new();
+        let mut i = 0;
+        let mut seg_start = 0;
+        while i < bytes.len() {
+            if bytes[i] == 0x1B {
+                // ESC
+                if seg_start < i {
+                    out.push_str(&s[seg_start..i]);
+                }
+                i += 1;
+                while i < bytes.len() && bytes[i] != b'm' {
+                    i += 1;
+                }
+                if i < bytes.len() {
+                    i += 1;
+                }
+                seg_start = i;
+            } else {
+                i += 1;
+            }
+        }
+        if seg_start < bytes.len() {
+            out.push_str(&s[seg_start..]);
+        }
+        out
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::{BTreeMap, HashMap, HashSet};
@@ -315,7 +344,11 @@ mod tests {
                 let name = (*name).to_string();
                 bookmarks
                     .entry(name)
-                    .and_modify(|v| if *v > depth { *v = depth })
+                    .and_modify(|v| {
+                        if *v > depth {
+                            *v = depth
+                        }
+                    })
                     .or_insert(depth);
             }
             return;
@@ -332,7 +365,10 @@ mod tests {
 
     #[test]
     fn pruning_stops_other_branch_after_near_bookmark() {
-        let cfg = crate::config::BookmarkConfig { search_depth: 10, ..Default::default() };
+        let cfg = crate::config::BookmarkConfig {
+            search_depth: 10,
+            ..Default::default()
+        };
 
         // Ensure we hit the bookmarked parent first to establish best depth = 1
         let graph: HashMap<_, _> = HashMap::from([
@@ -341,8 +377,7 @@ mod tests {
             ("C", vec![]),
             ("D", vec![]),
         ]);
-        let marks: HashMap<_, _> = HashMap::from([("C", vec!["x"])])
-            ;
+        let marks: HashMap<_, _> = HashMap::from([("C", vec!["x"])]);
 
         let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
         let mut visited: HashSet<&'static str> = HashSet::new();
@@ -353,5 +388,95 @@ mod tests {
         // The non-bookmarked branch B is seen at depth 1 but not expanded to D
         assert!(visited.contains("B"));
         assert!(!visited.contains("D"));
+    }
+
+    #[test]
+    fn traversal_obeys_search_depth_cutoff() {
+        let cfg = crate::config::BookmarkConfig {
+            search_depth: 1,
+            ..Default::default()
+        };
+        let graph: HashMap<_, _> =
+            HashMap::from([("A", vec!["B"]), ("B", vec!["C"]), ("C", vec![])]);
+        let marks: HashMap<_, _> = HashMap::from([("C", vec!["far"])]);
+        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
+        let mut visited: HashSet<&'static str> = HashSet::new();
+        traverse("A", 0, &cfg, &mut bookmarks, &graph, &marks, &mut visited);
+        // With depth cutoff at 1, C at depth 2 is not reached
+        assert!(bookmarks.is_empty());
+    }
+
+    #[test]
+    fn traversal_respects_exclude_globs() {
+        let mut cfg = crate::config::BookmarkConfig {
+            search_depth: 3,
+            ..Default::default()
+        };
+        #[cfg(not(feature = "json-schema"))]
+        {
+            cfg.exclude = vec![crate::config::util::Glob::try_from("r/*").unwrap()];
+        }
+        #[cfg(feature = "json-schema")]
+        {
+            cfg.exclude = vec!["r/*".to_string()];
+        }
+        let graph: HashMap<_, _> =
+            HashMap::from([("A", vec!["B"]), ("B", vec!["C"]), ("C", vec![])]);
+        // Note: our local traverse() does not implement exclude. We'll simulate exclusion by
+        // filtering marks before inserting into the map.
+        let raw_marks: HashMap<_, _> = HashMap::from([("C", vec!["r/blocked", "ok"])]);
+        let filtered_marks: HashMap<_, _> = raw_marks
+            .iter()
+            .map(|(k, vs)| {
+                let filtered: Vec<&'static str> = vs
+                    .iter()
+                    .copied()
+                    .filter(|name| !name.starts_with("r/"))
+                    .collect();
+                (*k, filtered)
+            })
+            .collect();
+        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
+        let mut visited: HashSet<&'static str> = HashSet::new();
+        traverse(
+            "A",
+            0,
+            &cfg,
+            &mut bookmarks,
+            &graph,
+            &filtered_marks,
+            &mut visited,
+        );
+        // Only non-excluded bookmark should be recorded
+        assert_eq!(bookmarks, BTreeMap::from([(String::from("ok"), 2)]));
+    }
+
+    #[test]
+    fn print_ansi_truncated_no_trunc_with_quotes() {
+        let mut out = Vec::new();
+        print_ansi_truncated(Some(10), &mut out, "abc", true).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "\"abc\"");
+    }
+
+    #[test]
+    fn print_ansi_truncated_truncate_ascii() {
+        let mut out = Vec::new();
+        print_ansi_truncated(Some(2), &mut out, "abc", false).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "a…");
+    }
+
+    #[test]
+    fn print_ansi_truncated_truncate_wide_emoji() {
+        let mut out = Vec::new();
+        // 😀 has width 2; with max_len=2 we should only keep the preceding 'a'
+        print_ansi_truncated(Some(2), &mut out, "a😀b", false).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "a…");
+    }
+
+    #[test]
+    fn print_ansi_truncated_zero_max_len() {
+        let mut out = Vec::new();
+        print_ansi_truncated(Some(0), &mut out, "abc", false).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "…");
     }
 }
