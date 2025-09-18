@@ -195,18 +195,114 @@ impl Metrics {
             return Ok(());
         }
 
-        let mut diff = crate::CommitDiff::default();
+        if state.commit_is_empty(command_helper)? == Some(true) {
+            data.commit.diff = Some(Default::default());
+            return Ok(());
+        }
 
         let Some(stats) = state.diff_stats(command_helper)? else {
             return Ok(());
         };
 
-        diff.files_changed = stats.entries().len();
-        diff.lines_added = stats.count_total_added();
-        diff.lines_removed = stats.count_total_removed();
+        let diff = crate::CommitDiff {
+            files_changed: stats.entries().len(),
+            lines_added: stats.count_total_added(),
+            lines_removed: stats.count_total_removed(),
+        };
 
         data.commit.diff = Some(diff);
 
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SimpleStats {
+    files_changed: usize,
+    lines_added: usize,
+    lines_removed: usize,
+}
+
+#[cfg(test)]
+impl Metrics {
+    fn parse_impl<FIsEmpty, FStats>(
+        &self,
+        data: &mut crate::JJData,
+        is_empty: FIsEmpty,
+        get_stats: FStats,
+    ) -> Result<(), CommandError>
+    where
+        FIsEmpty: FnOnce() -> Result<Option<bool>, CommandError>,
+        FStats: FnOnce() -> Result<Option<SimpleStats>, CommandError>,
+    {
+        if data.commit.diff.is_some() {
+            return Ok(());
+        }
+
+        if is_empty()? == Some(true) {
+            data.commit.diff = Some(Default::default());
+            return Ok(());
+        }
+
+        let Some(stats) = get_stats()? else {
+            return Ok(());
+        };
+
+        let diff = crate::CommitDiff {
+            files_changed: stats.files_changed,
+            lines_added: stats.lines_added,
+            lines_removed: stats.lines_removed,
+        };
+        data.commit.diff = Some(diff);
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_circuits_on_empty_commit() -> Result<(), CommandError> {
+        let m = Metrics::default();
+        let mut data = crate::JJData::default();
+
+        m.parse_impl(
+            &mut data,
+            || Ok(Some(true)),
+            || panic!("should not be called"),
+        )?;
+
+        let diff = data.commit.diff.as_ref().expect("diff should be set");
+        assert_eq!(diff.files_changed, 0);
+        assert_eq!(diff.lines_added, 0);
+        assert_eq!(diff.lines_removed, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn computes_stats_when_not_empty() -> Result<(), CommandError> {
+        let m = Metrics::default();
+        let mut data = crate::JJData::default();
+
+        m.parse_impl(
+            &mut data,
+            || Ok(Some(false)),
+            || {
+                Ok(Some(SimpleStats {
+                    files_changed: 3,
+                    lines_added: 10,
+                    lines_removed: 2,
+                }))
+            },
+        )?;
+
+        let diff = data.commit.diff.as_ref().expect("diff should be set");
+        assert_eq!(diff.files_changed, 3);
+        assert_eq!(diff.lines_added, 10);
+        assert_eq!(diff.lines_removed, 2);
         Ok(())
     }
 }
