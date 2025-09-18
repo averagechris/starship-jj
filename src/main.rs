@@ -161,6 +161,15 @@ fn print_prompt(
     Ok(())
 }
 
+fn prune_by_best_depth(depth: usize, bookmarks: &BTreeMap<String, usize>) -> bool {
+    let best_depth = bookmarks
+        .values()
+        .min()
+        .copied()
+        .unwrap_or(usize::MAX);
+    depth >= best_depth
+}
+
 fn find_parent_bookmarks(
     commit_id: &CommitId,
     depth: usize,
@@ -171,6 +180,11 @@ fn find_parent_bookmarks(
     visited: &mut HashSet<CommitId>,
 ) -> Result<(), CommandError> {
     if !visited.insert(commit_id.clone()) {
+        return Ok(());
+    }
+
+    // Prune search if we've already found a bookmark at a shallower depth
+    if prune_by_best_depth(depth, bookmarks) {
         return Ok(());
     }
 
@@ -262,4 +276,82 @@ fn print_ansi_truncated(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::{BTreeMap, HashMap, HashSet};
+
+    #[test]
+    fn prune_by_best_depth_basic() {
+        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
+        assert!(!prune_by_best_depth(0, &bookmarks));
+
+        bookmarks.insert("a".to_string(), 3);
+        assert!(!prune_by_best_depth(2, &bookmarks));
+        assert!(prune_by_best_depth(3, &bookmarks));
+        assert!(prune_by_best_depth(4, &bookmarks));
+    }
+
+    // A simple traversal harness to validate best-depth pruning without jj repo types.
+    fn traverse(
+        id: &'static str,
+        depth: usize,
+        cfg: &crate::config::BookmarkConfig,
+        bookmarks: &mut BTreeMap<String, usize>,
+        graph: &HashMap<&'static str, Vec<&'static str>>, // child -> parents
+        marks: &HashMap<&'static str, Vec<&'static str>>, // commit -> bookmark names
+        visited: &mut HashSet<&'static str>,
+    ) {
+        if !visited.insert(id) {
+            return;
+        }
+        if prune_by_best_depth(depth, bookmarks) {
+            return;
+        }
+        if let Some(names) = marks.get(id) {
+            for name in names {
+                let name = (*name).to_string();
+                bookmarks
+                    .entry(name)
+                    .and_modify(|v| if *v > depth { *v = depth })
+                    .or_insert(depth);
+            }
+            return;
+        }
+        if depth >= cfg.search_depth {
+            return;
+        }
+        if let Some(parents) = graph.get(id) {
+            for &p in parents {
+                traverse(p, depth + 1, cfg, bookmarks, graph, marks, visited);
+            }
+        }
+    }
+
+    #[test]
+    fn pruning_stops_other_branch_after_near_bookmark() {
+        let cfg = crate::config::BookmarkConfig { search_depth: 10, ..Default::default() };
+
+        // Ensure we hit the bookmarked parent first to establish best depth = 1
+        let graph: HashMap<_, _> = HashMap::from([
+            ("A", vec!["C", "B"]),
+            ("B", vec!["D"]),
+            ("C", vec![]),
+            ("D", vec![]),
+        ]);
+        let marks: HashMap<_, _> = HashMap::from([("C", vec!["x"])])
+            ;
+
+        let mut bookmarks: BTreeMap<String, usize> = BTreeMap::new();
+        let mut visited: HashSet<&'static str> = HashSet::new();
+
+        traverse("A", 0, &cfg, &mut bookmarks, &graph, &marks, &mut visited);
+
+        assert_eq!(bookmarks.get("x"), Some(&1));
+        // The non-bookmarked branch B is seen at depth 1 but not expanded to D
+        assert!(visited.contains("B"));
+        assert!(!visited.contains("D"));
+    }
 }

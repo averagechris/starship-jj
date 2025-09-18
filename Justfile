@@ -84,3 +84,16 @@ llm-review-supply-chain: upstream
 	jj diff --no-pager --from main@upstream --to @ 'root-file:"flake.lock"' || true
 	@echo
 	@echo "(Tip) Useful checks to run locally: cargo deny check; cargo audit; nix flake lock --update-input <input> --commit; verify checksums and yanks."
+
+# Dev: formatting, linting, and tests
+fmt:
+	cargo fmt --all
+
+fmt-check:
+	cargo fmt --all --check
+
+clippy:
+	cargo clippy --all-targets -- -D warnings
+
+test:
+	cargo test

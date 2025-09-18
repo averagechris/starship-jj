@@ -10,6 +10,7 @@
 - Upstream changes: `just upstream-changes` (deps/locks diffstat + full code diff)
 - LLM review prompt: `just llm-review-upstream` (prints agent prompt + upstream diffs)
 - Supply-chain review: `just llm-review-supply-chain` (prints supply-chain prompt + manifest/lock diffs)
+- Dev helpers: `just fmt`, `just fmt-check`, `just clippy`, `just test`
 - JSON schema: `cargo run --features json-schema -- starship prompt` (prints to stdout; redirect to `schema.json` if needed)
 - Imports: order `std`, external crates, `jj_*`/others, then `crate::`/`super::`; avoid `*` imports
 - Formatting: use rustfmt defaults; keep small focused modules like current layout
