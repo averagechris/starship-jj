@@ -200,4 +200,40 @@ mod tests {
             other => panic!("Unexpected color: {:?}", other),
         }
     }
+
+    #[test]
+    fn style_print_uses_self_and_fallback_colors() {
+        let s = Style {
+            color: Some(Color::Green),
+            bg_color: None,
+        };
+        let fallback = Style {
+            color: Some(Color::Red),
+            bg_color: Some(Color::Red),
+        };
+        let mut out = Vec::new();
+        s.print(&mut out, fallback).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), "\x1B[32;41m");
+    }
+
+    #[test]
+    fn style_format_prefers_self_over_fallback() {
+        let s = Style {
+            color: Some(Color::Blue),
+            bg_color: Some(Color::BrightYellow),
+        };
+        let fallback = Style {
+            color: Some(Color::Red),
+            bg_color: Some(Color::Green),
+        };
+        let formatted = s.format(fallback);
+        assert_eq!(formatted, "\x1B[34;103m");
+    }
+
+    #[test]
+    fn glob_into_string_roundtrip() {
+        let g = Glob::try_from("src/*.rs").unwrap();
+        let s: String = g.into();
+        assert_eq!(s, "src/*.rs");
+    }
 }

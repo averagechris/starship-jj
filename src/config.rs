@@ -152,6 +152,39 @@ impl Config {
         }
         Ok(())
     }
+
+    // Test-only helper to render modules directly into an arbitrary writer
+    // using provided data, without calling parse().
+    #[cfg(test)]
+    pub(crate) fn print_modules_for_test<W: Write>(
+        &self,
+        io: &mut W,
+        data: &crate::JJData,
+    ) -> Result<(), CommandError> {
+        for module in self.modules.iter() {
+            match module {
+                ModuleConfig::Bookmarks(bookmarks) => {
+                    bookmarks.print(io, data, &self.global.module_separator)?;
+                }
+                ModuleConfig::Commit(commit_desc) => {
+                    commit_desc.print(io, data, &self.global.module_separator)?
+                }
+                ModuleConfig::State(commit_warnings) => {
+                    commit_warnings.print(io, data, &self.global.module_separator)?
+                }
+                ModuleConfig::Metrics(commit_diff) => {
+                    commit_diff.print(io, data, &self.global.module_separator)?
+                }
+                ModuleConfig::Symbol(symbol) => {
+                    symbol.print(io, data, &self.global.module_separator)?
+                }
+            }
+        }
+        if self.global.reset_color {
+            util::Style::default().print(io, None)?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -217,6 +250,41 @@ mod tests {
         assert_eq!(names, ["Symbol", "Bookmarks", "Commit", "State", "Metrics"]);
         assert_eq!(cfg.global.module_separator, super::default_separator());
         assert!(cfg.global.reset_color);
+    }
+
+    #[test]
+    fn print_modules_for_test_symbol_then_commit_and_reset() {
+        let cfg = Config {
+            global: GlobalConfig {
+                module_separator: "/".to_string(),
+                timeout: None,
+                bookmarks: Default::default(),
+                reset_color: true,
+            },
+            modules: vec![
+                ModuleConfig::Symbol(Default::default()),
+                ModuleConfig::Commit(Default::default()),
+            ],
+        };
+        let mut data = crate::JJData::default();
+        data.commit.desc = Some("hello".to_string());
+
+        let mut buf = Vec::new();
+        cfg.print_modules_for_test(&mut buf, &data).unwrap();
+
+        // Verify order and separators by independently rendering the Symbol module
+        let mut sym = Vec::new();
+        Symbol::default()
+            .print(&mut sym, &data, &cfg.global.module_separator)
+            .unwrap();
+        let expected_prefix = strip_ansi(&sym);
+        assert_eq!(strip_ansi(&buf), format!("{}\"hello\"/", expected_prefix));
+        // Verify trailing reset code is present
+        assert!(
+            String::from_utf8(buf.clone())
+                .unwrap()
+                .ends_with("\u{1b}[39;49m")
+        );
     }
 }
 

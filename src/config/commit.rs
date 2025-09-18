@@ -98,8 +98,18 @@ impl Commit {
         let Some(commit) = state.commit(command_helper)? else {
             return Ok(());
         };
-        data.commit.desc = Some(commit.description().to_string());
+        let desc = Some(commit.description().to_string());
+        self.set_desc_if_missing(data, desc);
         Ok(())
+    }
+
+    // Private helper used by production and tests; ensures idempotent behavior.
+    fn set_desc_if_missing(&self, data: &mut crate::JJData, desc: Option<String>) {
+        if data.commit.desc.is_none()
+            && let Some(d) = desc
+        {
+            data.commit.desc = Some(d);
+        }
     }
 }
 
@@ -160,5 +170,23 @@ mod tests {
         let mut out = Vec::new();
         c.print(&mut out, &data, "/").unwrap();
         assert_eq!(strip_ansi(&out), "\"first\"/");
+    }
+
+    #[test]
+    fn set_desc_if_missing_sets_desc_only_when_none() {
+        let c = Commit::default();
+        let mut data = crate::JJData::default();
+        // Case 1: desc is None, incoming desc is Some
+        c.set_desc_if_missing(&mut data, Some("msg".to_string()));
+        assert_eq!(data.commit.desc.as_deref(), Some("msg"));
+
+        // Case 2: desc already set; new desc should not override
+        c.set_desc_if_missing(&mut data, Some("new".to_string()));
+        assert_eq!(data.commit.desc.as_deref(), Some("msg"));
+
+        // Case 3: desc None, incoming desc None -> remains None
+        let mut data2 = crate::JJData::default();
+        c.set_desc_if_missing(&mut data2, None);
+        assert!(data2.commit.desc.is_none());
     }
 }

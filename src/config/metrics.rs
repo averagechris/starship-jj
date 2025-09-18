@@ -269,6 +269,27 @@ mod print_tests {
             .format(3, &m.style, super::default_changed_style());
         assert_eq!(strip_ansi(changed.as_bytes()), "3");
     }
+
+    #[test]
+    fn prints_nothing_when_no_diff() {
+        let m = Metrics::default();
+        let data = crate::JJData::default();
+        let mut out = Vec::new();
+        m.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+
+    #[test]
+    fn metric_format_with_custom_prefix_and_suffix() {
+        let m = Metrics::default();
+        let metric = super::Metric {
+            prefix: "~".to_string(),
+            suffix: "x".to_string(),
+            style: Default::default(),
+        };
+        let s = metric.format(5, &m.style, super::default_changed_style());
+        assert_eq!(strip_ansi(s.as_bytes()), "~5x");
+    }
 }
 
 #[cfg(test)]
@@ -376,6 +397,17 @@ mod parse_tests {
         assert_eq!(diff.files_changed, 3);
         assert_eq!(diff.lines_added, 10);
         assert_eq!(diff.lines_removed, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn compute_stats_none_leaves_diff_unchanged() -> Result<(), CommandError> {
+        let m = Metrics::default();
+        let mut data = crate::JJData::default();
+
+        m.parse_impl(&mut data, || Ok(Some(false)), || Ok(None))?;
+
+        assert!(data.commit.diff.is_none());
         Ok(())
     }
 }

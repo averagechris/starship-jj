@@ -220,16 +220,34 @@ impl State {
             let change_id = commit.change_id();
             let change = repo.resolve_change_id(change_id);
 
-            match change {
-                Some(commits) => match commits.len() {
-                    0 => data.commit.warnings.hidden = Some(true),
-                    1 => {}
-                    _ => data.commit.warnings.divergent = Some(true),
-                },
-                None => data.commit.warnings.hidden = Some(true),
+            let resolved_len = change.as_ref().map(|commits| commits.len());
+            let (hidden, divergent) = classify_change_resolution(resolved_len);
+
+            if !self.hidden.disabled
+                && data.commit.warnings.hidden.is_none()
+                && let Some(v) = hidden
+            {
+                data.commit.warnings.hidden = Some(v);
+            }
+            if !self.divergent.disabled
+                && data.commit.warnings.divergent.is_none()
+                && let Some(v) = divergent
+            {
+                data.commit.warnings.divergent = Some(v);
             }
         }
         Ok(())
+    }
+}
+
+// Pure helper to classify change-id resolution into hidden/divergent flags.
+// None or 0 → hidden; 1 → none; >=2 → divergent.
+pub(crate) fn classify_change_resolution(len: Option<usize>) -> (Option<bool>, Option<bool>) {
+    match len {
+        None => (Some(true), None),
+        Some(0) => (Some(true), None),
+        Some(1) => (None, None),
+        Some(_) => (None, Some(true)),
     }
 }
 
@@ -237,6 +255,34 @@ impl State {
 mod tests {
     use super::*;
     use crate::testutil::strip_ansi;
+
+    #[test]
+    fn classify_none_is_hidden() {
+        let (hidden, div) = classify_change_resolution(None);
+        assert_eq!(hidden, Some(true));
+        assert_eq!(div, None);
+    }
+
+    #[test]
+    fn classify_zero_is_hidden() {
+        let (hidden, div) = classify_change_resolution(Some(0));
+        assert_eq!(hidden, Some(true));
+        assert_eq!(div, None);
+    }
+
+    #[test]
+    fn classify_one_is_neither() {
+        let (hidden, div) = classify_change_resolution(Some(1));
+        assert_eq!(hidden, None);
+        assert_eq!(div, None);
+    }
+
+    #[test]
+    fn classify_many_is_divergent() {
+        let (hidden, div) = classify_change_resolution(Some(3));
+        assert_eq!(hidden, None);
+        assert_eq!(div, Some(true));
+    }
 
     #[test]
     fn prints_in_order_with_separators_and_module_sep() {
