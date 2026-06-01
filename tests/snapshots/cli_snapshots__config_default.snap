@@ -25,7 +25,7 @@ surround_with_quotes = true
 [[module]]
 type = "Commit"
 max_length = 24
-empty_text = "(no description set)"
+empty_text = "n/a"
 surround_with_quotes = true
 
 [[module]]

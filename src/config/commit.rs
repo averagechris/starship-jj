@@ -29,7 +29,7 @@ fn default_max_length() -> Option<usize> {
     Some(24)
 }
 fn default_empty_text() -> String {
-    "(no description set)".to_string()
+    "n/a".to_string()
 }
 
 fn default_surround_with_quotes() -> bool {
@@ -148,7 +148,7 @@ mod tests {
         let c = Commit::default();
         let mut out = Vec::new();
         c.print(&mut out, &data, "/").unwrap();
-        assert_eq!(strip_ansi(&out), "\"(no description set)\"/");
+        assert_eq!(strip_ansi(&out), "\"n/a\"/");
     }
 
     #[test]

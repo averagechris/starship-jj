@@ -3,4 +3,4 @@ source: tests/cli_snapshots.rs
 assertion_line: 76
 expression: stable(&out)
 ---
-󱗆 |"(no description set)"|(EMPTY)|[0 +0-0]|
+󱗆 |"n/a"|(EMPTY)|[0 +0-0]|

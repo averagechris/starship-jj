@@ -37,7 +37,7 @@
         {
           "bg_color": null,
           "color": null,
-          "empty_text": "(no description set)",
+          "empty_text": "n/a",
           "max_length": 24,
           "surround_with_quotes": true,
           "type": "Commit"
@@ -393,7 +393,7 @@
             },
             "empty_text": {
               "description": "The text that should be printed when the current revision has no description yet",
-              "default": "(no description set)",
+              "default": "n/a",
               "type": "string"
             },
             "max_length": {

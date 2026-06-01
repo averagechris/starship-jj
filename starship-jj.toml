@@ -43,7 +43,7 @@ max_length = 24
 # color = "Green"
 # bg_color = "Yellow"
 # default text if the commit description is not set
-# empty_text = "(no description set)"
+# empty_text = "n/a"
 # Surround the commit text with double-quotes
 # surround_with_quotes = true
 
