@@ -4,27 +4,27 @@ use std::sync::Arc;
 use jj_cli::command_error::CommandError;
 use jj_lib::{backend::CommitId, store::Store, view::View};
 
-use crate::config::BookmarkConfig;
+use crate::config::{BookmarkConfig, IgnoreEmpty};
 
 pub(crate) fn find_parent_bookmarks(
     commit_id: &CommitId,
-    depth: usize,
     config: &BookmarkConfig,
     bookmarks: &mut BTreeMap<String, usize>,
     view: &View,
     store: &Arc<Store>,
     visited: &mut HashSet<CommitId>,
+    ignore_empty_commits: IgnoreEmpty,
 ) -> Result<(), CommandError> {
-    let mut queue: VecDeque<(CommitId, usize)> = VecDeque::new();
-    queue.push_back((commit_id.clone(), depth));
+    let mut queue: VecDeque<(CommitId, usize, usize, IgnoreEmpty)> = VecDeque::new();
+    queue.push_back((commit_id.clone(), 0, 0, ignore_empty_commits));
 
-    let mut best_depth: Option<usize> = bookmarks.values().min().copied();
+    let mut best_distance: Option<usize> = bookmarks.values().min().copied();
 
-    while let Some((cid, d)) = queue.pop_front() {
-        if let Some(best) = best_depth
-            && d > best
+    while let Some((cid, search_depth, distance, ignore_empty_commits)) = queue.pop_front() {
+        if let Some(best) = best_distance
+            && distance > best
         {
-            break;
+            continue;
         }
         if !visited.insert(cid.clone()) {
             continue;
@@ -50,34 +50,51 @@ pub(crate) fn find_parent_bookmarks(
                 bookmarks
                     .entry(bookmark)
                     .and_modify(|v| {
-                        if *v > d {
-                            *v = d;
+                        if *v > distance {
+                            *v = distance;
                         }
                     })
                     .or_insert_with(|| {
                         inserted = true;
-                        d
+                        distance
                     });
                 inserted_any |= inserted;
             }
-            if inserted_any && best_depth.is_none_or(|best| d < best) {
-                best_depth = Some(d);
+            if inserted_any && best_distance.is_none_or(|best| distance < best) {
+                best_distance = Some(distance);
             }
             continue;
         }
 
-        if d >= config.search_depth {
+        if search_depth >= config.search_depth {
             continue;
         }
-        if let Some(best) = best_depth
-            && d + 1 > best
+        if let Some(best) = best_distance
+            && distance + 1 > best
         {
             continue;
         }
 
         let commit = store.get_commit(&cid)?;
+        let ignore_current =
+            ignore_empty_commits != IgnoreEmpty::None && commit.description().is_empty();
+        let parent_distance = if ignore_current {
+            distance
+        } else {
+            distance + 1
+        };
+        let parent_ignore_empty_commits = if ignore_empty_commits == IgnoreEmpty::Current {
+            IgnoreEmpty::None
+        } else {
+            ignore_empty_commits
+        };
         for p in commit.parent_ids() {
-            queue.push_back((p.clone(), d + 1));
+            queue.push_back((
+                p.clone(),
+                search_depth + 1,
+                parent_distance,
+                parent_ignore_empty_commits,
+            ));
         }
     }
 

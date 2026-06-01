@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use jj_cli::{cli_util::RevisionArg, command_error::CommandError, ui::Ui};
-use jj_lib::repo::Repo;
+use jj_lib::{index::ResolvedChangeState, repo::Repo};
 #[cfg(feature = "json-schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -173,8 +173,6 @@ impl State {
         data: &mut crate::JJData,
         global: &super::GlobalConfig,
     ) -> Result<(), CommandError> {
-        let workspace_helper = command_helper.workspace_helper(&Ui::null())?;
-
         if !self.empty.disabled && data.commit.warnings.empty.is_none() {
             data.commit.warnings.empty = state.commit_is_empty(command_helper)?;
         }
@@ -182,23 +180,23 @@ impl State {
             data.commit.warnings.conflict = state
                 .commit(command_helper)?
                 .as_ref()
-                .map(|c| c.has_conflict())
-                .transpose()?;
+                .map(|c| c.has_conflict());
         }
 
         self.parse_hidden_and_divergent(command_helper, state, data, global)?;
 
         if !self.immutable.disabled
             && data.commit.warnings.immutable.is_none()
-            && let Some(commit_id) = state.commit_id(command_helper)?
+            && let Some(commit_id) = state.commit_id(command_helper)?.clone()
         {
+            let workspace_helper = state.workspace_helper(command_helper)?;
             let revs = workspace_helper
                 .parse_revset(&Ui::null(), &RevisionArg::from("immutable()".to_string()))?;
 
             let mut immutable = revs.evaluate_to_commit_ids()?;
 
             data.commit.warnings.immutable =
-                Some(immutable.any(|id| id.as_ref().is_ok_and(|id| id == commit_id)));
+                Some(immutable.any(|id| id.as_ref().is_ok_and(|id| id == &commit_id)));
         }
 
         Ok(())
@@ -218,9 +216,15 @@ impl State {
                 return Ok(());
             };
             let change_id = commit.change_id();
-            let change = repo.resolve_change_id(change_id);
+            let change = repo.resolve_change_id(change_id)?;
 
-            let resolved_len = change.as_ref().map(|commits| commits.len());
+            let resolved_len = change.as_ref().map(|commits| {
+                commits
+                    .targets
+                    .iter()
+                    .filter(|(_, state)| *state == ResolvedChangeState::Visible)
+                    .count()
+            });
             let (hidden, divergent) = classify_change_resolution(resolved_len);
 
             if !self.hidden.disabled

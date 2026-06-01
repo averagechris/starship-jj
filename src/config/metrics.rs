@@ -15,6 +15,10 @@ pub struct Metrics {
     #[serde(default = "default_template")]
     template: String,
 
+    /// Hide the metrics module when there are no changes.
+    #[serde(default)]
+    hide_if_empty: bool,
+
     // added_files: Style,
     // removed_files: Style,
     /// Controlls how the number of changed files is rendered.
@@ -37,6 +41,7 @@ impl Default for Metrics {
         Self {
             style: default_style(),
             template: default_template(),
+            hide_if_empty: false,
             changed_files: default_changed_files(),
             added_lines: default_added_lines(),
             removed_lines: default_removed_lines(),
@@ -144,6 +149,9 @@ impl Metrics {
         let Some(diff) = &data.commit.diff else {
             return Ok(());
         };
+        if self.hide_if_empty && diff.is_empty() {
+            return Ok(());
+        }
 
         let context = Context {
             added: self
@@ -286,6 +294,19 @@ mod print_tests {
     fn prints_nothing_when_no_diff() {
         let m = Metrics::default();
         let data = crate::JJData::default();
+        let mut out = Vec::new();
+        m.print(&mut out, &data, "/").unwrap();
+        assert_eq!(strip_ansi(&out), "");
+    }
+
+    #[test]
+    fn hide_if_empty_suppresses_zero_metrics() {
+        let m = Metrics {
+            hide_if_empty: true,
+            ..Default::default()
+        };
+        let mut data = crate::JJData::default();
+        data.commit.diff = Some(crate::CommitDiff::default());
         let mut out = Vec::new();
         m.print(&mut out, &data, "/").unwrap();
         assert_eq!(strip_ansi(&out), "");

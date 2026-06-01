@@ -31,6 +31,24 @@ pub struct Bookmarks {
     /// Do not render quotes around bookmark names
     #[serde(default = "default_surround_with_quotes")]
     surround_with_quotes: bool,
+    /// Ignore commits without a description when calculating bookmark distance.
+    #[serde(default = "default_ignore_empty_commits")]
+    ignore_empty_commits: IgnoreEmpty,
+}
+
+#[cfg_attr(feature = "json-schema", derive(JsonSchema))]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum IgnoreEmpty {
+    /// Count all commits, including commits without a description.
+    None,
+    /// Don't count the current commit if its description is empty.
+    Current,
+    /// Don't count any commits without a description.
+    All,
+}
+
+fn default_ignore_empty_commits() -> IgnoreEmpty {
+    IgnoreEmpty::None
 }
 
 fn default_style() -> Style {
@@ -61,6 +79,7 @@ impl Default for Bookmarks {
             separator: default_separator(),
             max_length: Default::default(),
             surround_with_quotes: true,
+            ignore_empty_commits: default_ignore_empty_commits(),
         }
     }
 }
@@ -145,12 +164,12 @@ impl Bookmarks {
 
         crate::search::find_parent_bookmarks(
             commit_id,
-            0,
             &global.bookmarks,
             &mut bookmarks,
             view,
             store,
             &mut HashSet::new(),
+            self.ignore_empty_commits,
         )?;
 
         data.bookmarks = Some(bookmarks);

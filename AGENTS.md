@@ -10,6 +10,9 @@
 - Upstream changes: `just upstream-changes` (deps/locks diffstat + full code diff)
 - LLM review prompt: `just llm-review-upstream` (prints agent prompt + upstream diffs)
 - Supply-chain review: `just llm-review-supply-chain` (prints supply-chain prompt + manifest/lock diffs)
+- Last upstream port: reviewed `main@upstream` through `8ca6a957` (2026-03-17); next upstream review should diff from that commit.
+- Ported from upstream after `0.6.0`: `jj`/`jj-cli` 0.39 API updates, flake overlay `prev.stdenv.hostPlatform.system`, RustSec ignore cleanup, snake_case/hex colors, text attrs, commit/change id rendering, `show_previous_if_empty`, metrics `hide_if_empty`, bookmark `ignore_empty_commits`.
+- Upstream gotcha: hex color code had `!h.len() == 7`; this fork uses `hex.len() != 7` and tests wrong-length hex values.
 - Dev helpers: `just fmt`, `just fmt-check`, `just clippy`, `just test`
 - JSON schema: `cargo run --features json-schema -- starship prompt` (prints to stdout; redirect to `schema.json` if needed)
 - Imports: order `std`, external crates, `jj_*`/others, then `crate::`/`super::`; avoid `*` imports
@@ -22,3 +25,5 @@
 - CLI: extend via `clap` subcommands mirroring `StarshipCommands`; document env vars
 - Dependencies: don’t add `anyhow`/`thiserror`/`tracing` unless agreed; stick to current stack
 - Contrib: use `jj` (not git); conventional commits; run fmt, clippy, deny, audit before PR; no Cursor/Copilot rules present
+
+<!-- Last audited: 2026-06-01 | recorded upstream port baseline and gotchas -->

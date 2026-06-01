@@ -16,6 +16,7 @@ use symbol::Symbol;
 use util::Glob;
 
 pub mod util;
+pub use bookmarks::IgnoreEmpty;
 
 mod bookmarks;
 mod commit;
@@ -364,7 +365,7 @@ mod tests {
         assert!(
             String::from_utf8(buf.clone())
                 .unwrap()
-                .ends_with("\u{1b}[39;49m")
+                .ends_with("\u{1b}[0;39;49m")
         );
     }
 }

@@ -102,7 +102,6 @@
       }
     )
     // {
-      overlays.default = final: prev: { inherit (self.packages."${prev.system}") starship-jj; };
+      overlays.default = final: prev: { inherit (self.packages."${prev.stdenv.hostPlatform.system}") starship-jj; };
     };
   }
-

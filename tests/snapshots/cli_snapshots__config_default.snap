@@ -21,12 +21,18 @@ separator = " "
 color = "Magenta"
 behind_symbol = "⇡"
 surround_with_quotes = true
+ignore_empty_commits = "None"
 
 [[module]]
 type = "Commit"
+previous_message_symbol = "⇣"
 max_length = 24
+show_previous_if_empty = false
 empty_text = "n/a"
 surround_with_quotes = true
+
+[module.non_unique]
+color = "Black"
 
 [[module]]
 type = "State"
@@ -60,6 +66,7 @@ color = "Yellow"
 [[module]]
 type = "Metrics"
 template = "[{changed} {added}{removed}]"
+hide_if_empty = false
 color = "Magenta"
 
 [module.changed_files]

@@ -8,6 +8,7 @@ use jj_cli::{
     command_error::{CommandError, user_error},
     ui::Ui,
 };
+use jj_lib::backend::{ChangeId, CommitId};
 // use jj_lib::{backend::CommitId, store::Store, view::View};
 
 pub use state::State;
@@ -77,6 +78,9 @@ struct CommitData {
     desc: Option<String>,
     warnings: CommitWarnings,
     diff: Option<CommitDiff>,
+    ahead: bool,
+    commit_id: Option<(CommitId, usize)>,
+    change_id: Option<(ChangeId, usize)>,
 }
 
 #[derive(Default)]
@@ -97,6 +101,12 @@ struct CommitDiff {
     lines_removed: usize,
 }
 
+impl CommitDiff {
+    fn is_empty(&self) -> bool {
+        self.files_changed == 0 && self.lines_added == 0 && self.lines_removed == 0
+    }
+}
+
 fn print_prompt(
     command_helper: &CommandHelper,
     config_path: &Option<PathBuf>,
@@ -112,7 +122,7 @@ fn print_prompt(
     let mut config = load_config_file(config_path)?;
     config.apply_env_overrides_from_env()?;
 
-    let mut state = State::default();
+    let mut state = State::new(!command_helper.global_args().ignore_working_copy);
     let mut data = JJData::default();
 
     config.print(&command_helper, &mut state, &mut data)?;

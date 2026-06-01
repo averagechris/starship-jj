@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jj_cli::{
-    cli_util::CommandHelper,
+    cli_util::{CommandHelper, WorkspaceCommandHelper},
     command_error::CommandError,
     diff_util::{DiffStatOptions, DiffStats, get_copy_records},
     ui::Ui,
@@ -13,29 +13,55 @@ use jj_lib::{
     fileset::FilesetExpression,
     merged_tree::MergedTree,
     repo::{ReadonlyRepo, Repo},
-    workspace::Workspace,
 };
 use pollster::FutureExt;
 
 type Result<T> = std::result::Result<T, CommandError>;
 
-#[derive(Default)]
 pub struct State {
-    workspace: Option<Workspace>,
+    snapshot: bool,
+    workspace_helper: Option<WorkspaceCommandHelper>,
     repo: Option<Arc<ReadonlyRepo>>,
     commit_id: Option<Option<CommitId>>,
     commit: Option<Option<Commit>>,
+    parent_commits: Option<Vec<Commit>>,
     tree: Option<Option<MergedTree>>,
     parent_tree: Option<Option<MergedTree>>,
 }
 
 impl State {
-    pub fn workspace(&mut self, command_helper: &CommandHelper) -> Result<&Workspace> {
-        if self.workspace.is_none() {
-            let workspace = command_helper.load_workspace()?;
-            self.workspace = Some(workspace);
+    pub fn new(snapshot: bool) -> Self {
+        Self {
+            snapshot,
+            workspace_helper: Default::default(),
+            repo: Default::default(),
+            commit_id: Default::default(),
+            commit: Default::default(),
+            parent_commits: Default::default(),
+            tree: Default::default(),
+            parent_tree: Default::default(),
         }
-        let Some(w) = self.workspace.as_ref() else {
+    }
+
+    fn load_workspace(&mut self, command_helper: &CommandHelper) -> Result<()> {
+        if self.workspace_helper.is_some() {
+            return Ok(());
+        }
+        let helper = if self.snapshot {
+            command_helper.workspace_helper(&Ui::null())?
+        } else {
+            command_helper.workspace_helper_no_snapshot(&Ui::null())?
+        };
+        self.workspace_helper = Some(helper);
+        Ok(())
+    }
+
+    pub fn workspace_helper(
+        &mut self,
+        command_helper: &CommandHelper,
+    ) -> Result<&WorkspaceCommandHelper> {
+        self.load_workspace(command_helper)?;
+        let Some(w) = self.workspace_helper.as_ref() else {
             unreachable!()
         };
         Ok(w)
@@ -45,10 +71,9 @@ impl State {
         if self.repo.is_some() {
             return Ok(());
         }
-        let repo_loader = self.workspace(command_helper)?.repo_loader();
-        let op_head = command_helper.resolve_operation(&Ui::null(), repo_loader)?;
-        let repo = repo_loader.load_at(&op_head)?;
-        self.repo = Some(repo);
+        let workspace_helper = self.workspace_helper(command_helper)?;
+        let repo = workspace_helper.repo();
+        self.repo = Some(repo.clone());
         Ok(())
     }
 
@@ -67,7 +92,7 @@ impl State {
         let commit_id = self
             .repo(command_helper)?
             .view()
-            .get_wc_commit_id(self.workspace(command_helper)?.workspace_name())
+            .get_wc_commit_id(self.workspace_helper(command_helper)?.workspace_name())
             .cloned();
 
         self.commit_id = Some(commit_id);
@@ -105,6 +130,37 @@ impl State {
         Ok(w)
     }
 
+    pub fn load_parent_commits(&mut self, command_helper: &CommandHelper) -> Result<()> {
+        if self.parent_commits.is_some() {
+            return Ok(());
+        }
+
+        let parent_commits = self
+            .commit(command_helper)?
+            .as_ref()
+            .map(|commit| {
+                let store = commit.store();
+                commit
+                    .parent_ids()
+                    .iter()
+                    .map(|id| store.get_commit(id))
+                    .collect::<std::result::Result<Vec<_>, _>>()
+            })
+            .transpose()?
+            .unwrap_or_default();
+
+        self.parent_commits = Some(parent_commits);
+        Ok(())
+    }
+
+    pub fn parent_commits(&mut self, command_helper: &CommandHelper) -> Result<&Vec<Commit>> {
+        self.load_parent_commits(command_helper)?;
+        let Some(w) = self.parent_commits.as_ref() else {
+            unreachable!()
+        };
+        Ok(w)
+    }
+
     pub fn load_parent_tree(&mut self, command_helper: &CommandHelper) -> Result<()> {
         if self.parent_tree.is_some() {
             return Ok(());
@@ -113,7 +169,7 @@ impl State {
         let commit = self.commit(command_helper)?;
         let parent_tree = commit
             .as_ref()
-            .map(|c| c.parent_tree(repo.as_ref()))
+            .map(|c| c.parent_tree(repo.as_ref()).block_on())
             .transpose()?;
         self.parent_tree = Some(parent_tree);
         Ok(())
@@ -131,7 +187,7 @@ impl State {
             return Ok(());
         }
         let commit = self.commit(command_helper)?;
-        let tree = commit.as_ref().map(|c| c.tree()).transpose()?;
+        let tree = commit.as_ref().map(|c| c.tree());
         self.tree = Some(tree);
         Ok(())
     }
@@ -191,6 +247,6 @@ impl State {
             return Ok(None);
         };
 
-        Ok(Some(tree == parent_tree))
+        Ok(Some(tree.tree_ids() == parent_tree.tree_ids()))
     }
 }

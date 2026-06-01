@@ -19,15 +19,19 @@ exclude = []
 type = "Bookmarks"
 # Text that will be rendered between each bookmark.
 separator = " "
-# Color the text will be rendered in. One of Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
-# BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, BrightWhite
+# Color the text will be rendered in. Supports PascalCase, snake_case, true color, and hex.
+# Examples: "Magenta", "bright_blue", "#ff00ff", or color.TrueColor = { r = 255, g = 0, b = 255 }
 color = "Magenta"
-# True RGB Color can also be used like this. Do not use both color and color.TrueColor at the same time!
-# color.TrueColor = [255, 255, 255]
 # Text background color. Can also be TrueColor.
 # bg_color = "Yellow"
+# Text attributes can be enabled on any styled section.
+# bold = true
+# italic = true
+# underline = true
 # A suffix that will be printed when the given bookmark is behing the working copy.
 behind_symbol = "⇡"
+# Ignore commits without descriptions when counting bookmark distance: "None", "Current", or "All".
+# ignore_empty_commits = "None"
 # Maximum amout of bookmarks that will be rendered.
 # max_bookmarks = 1
 # Maximum length the bookmark name will be truncated to.
@@ -46,6 +50,14 @@ max_length = 24
 # empty_text = "n/a"
 # Surround the commit text with double-quotes
 # surround_with_quotes = true
+# Show the previous commit's description when the current commit is empty.
+# show_previous_if_empty = false
+# previous_message_symbol = "⇣"
+# Enable rendering ids by adding these style tables.
+# [module.change]
+# color = "Magenta"
+# [module.commit]
+# color = "Blue"
 
 [[module]]
 # Prints a warning if the working copy contains any conflicts, is divergent or hidden
@@ -83,6 +95,8 @@ color = "Yellow"
 type = "Metrics"
 color = "Magenta"
 # bg_color = "Yellow"
+# Hide the metrics module when there are no changes [0 +0-0].
+# hide_if_empty = true
 # Controls how the changes are rendered, use {added}, {removed} and {changed} to render the number of changes.
 template = "[{changed} {added}{removed}]"
 
