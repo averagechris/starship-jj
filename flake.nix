@@ -34,6 +34,14 @@
           if rootPackage ? readme then builtins.readFile (./. + ("/" + rootPackage.readme)) else null;
         homepage = rootPackage.homePage or rootPackage.repository or null;
         license = rootPackage.license or null;
+        rustDependencyTools = with pkgs; [
+          cargo-audit
+          cargo-deny
+          cargo-license
+          cargo-machete
+          cargo-outdated
+          cargo-udeps
+        ];
 
         rustPackage =
           bin-dir: features:
@@ -81,10 +89,8 @@
           packages = with pkgs; [
             rust-analyzer
             rustDevToolchain
-            cargo-audit
-            cargo-deny
             just
-          ];
+          ] ++ rustDependencyTools;
           inputsFrom = [ self.packages."${system}".starship-jj ];
         };
         # Dev shell that prebuilds the dotenv-enabled variant; you can still
@@ -93,10 +99,8 @@
           packages = with pkgs; [
             rust-analyzer
             rustDevToolchain
-            cargo-audit
-            cargo-deny
             just
-          ];
+          ] ++ rustDependencyTools;
           inputsFrom = [ self.packages."${system}".starship-jj-dotenv ];
         };
       }

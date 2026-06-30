@@ -121,12 +121,32 @@ deny:
 audit:
 	cargo audit
 
+# Dependency freshness: cargo-outdated
+outdated:
+	cargo outdated
+
+# Unused dependency check: cargo-machete
+machete:
+	cargo machete
+
+# Unused dependency check using compiler metadata: cargo-udeps
+udeps:
+	RUSTC_BOOTSTRAP=1 cargo udeps --all-targets
+
+# License inventory for dependency review
+license:
+	cargo license
+
+# Dependency-management checks and inventories
+deps: deny audit outdated machete udeps license
+	@echo "ok: dependency checks completed"
+
 # Run formatter check and clippy
 check: fmt-check clippy
 	@:
 
 # Full CI: format check, clippy, tests, deny & audit
-ci: fmt-check clippy test-all deny audit
+ci: fmt-check clippy test-all deny audit machete
 	@echo "ok: ci checks passed"
 
 # run lints that fix the things they find
