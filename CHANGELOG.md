@@ -7,6 +7,40 @@ app; fork releases are tagged `vX.Y.Z` (upstream tags 0.5.0–0.7.0 are unprefix
 
 ## Unreleased
 
+
+## v1.0.0 - 2026-07-03
+
+### Added
+
+- Port selected upstream improvements.
+
+### Changed
+
+- Adopt standard fleet release interface.
+- Add Rust dependency management checks.
+- Add no description set tst.
+- Chore(readme) add screenshot.
+- Chore(release) make a release with fork changes.
+- Chore(tests) add integration snapshot tests.
+- Chore(just) add fix flags and just lint task.
+- Extract pure helpers and add focused unit tests.
+- Increase coverage to lock output contracts and enable safe refactors; add Just recipes 'check' and 'ci' (fmt, clippy, tests, deny, audit); fix State printing to honor disabled flags; ensure Config::default resets color by default.
+- Chore(repo) add unit tests.
+- Add just task to review upstream changes.
+- Add Agents.md.
+- Add just; Justfile tasks: 'upstream' (fetch) and 'rebase-upstream' (rebase main onto main@upstream).
+- Fork: mark README as private fork and remove GitLab CI.
+
+### Performance
+
+- Speed up prompt render.
+- BFS nearest-bookmark search with global depth cutoff.
+- Remove per-prompt dotenv/config merging; add targeted env overrides.
+- Write prompt once via buffered stdout.
+- Preload repo/commit/commit_id/tree once before module loop.
+- Prune ancestry search by current best depth.
+- Skip diff stats when working copy is clean; add unit tests for short-circuit.
+
 ## [0.6.0](https://gitlab.com/lanastara_foss/starship-jj/-/compare/0.5.1..0.6.0) - 2025-09-10
 
 ### 🚀 Features
@@ -153,4 +187,3 @@ app; fork releases are tagged `vX.Y.Z` (upstream tags 0.5.0–0.7.0 are unprefix
 ### ⚙️ Miscellaneous Tasks
 
 - fix Cargo.toml for publishing- ([5be560c](https://gitlab.com/lanastara_foss/starship-jj/-/commit/5be560cbc190aba58c7a358e3290324e06c4ea79)) - Lilly Mannhal
-
