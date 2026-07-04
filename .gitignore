@@ -7,3 +7,5 @@ public
 .vscode
 .direnv
 .envrc
+/dist
+/result-release-artifact

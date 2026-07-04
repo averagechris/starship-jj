@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+Entries above the upstream history are managed by the `prepare-release` flake
+app; fork releases are tagged `vX.Y.Z` (upstream tags 0.5.0–0.7.0 are unprefixed).
+
+## Unreleased
+
 ## [0.6.0](https://gitlab.com/lanastara_foss/starship-jj/-/compare/0.5.1..0.6.0) - 2025-09-10
 
 ### 🚀 Features
