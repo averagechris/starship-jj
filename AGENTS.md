@@ -1,10 +1,10 @@
 # AGENTS: starship-jj Quick Guide
 - Release interface: standard fleet interface (see averagechris.srht.site AGENTS.md); version in Cargo.toml `[package]`, `## Unreleased` in CHANGELOG.md, tags `vX.Y.Z` (legacy unprefixed upstream tags 0.1.0–0.7.0 — leave alone), pages publish to averagechris.srht.site/starship-jj, Linux manifest `builds/release-linux-x86_64.yml` (explicit `hut builds submit` only). Commands:
   - `nix run .#prepare-release -- --version X.Y.Z` — bump version, date CHANGELOG, sync builds manifest
-  - `nix run .#release-tag` — jj tag vX.Y.Z + push
+  - `nix run .#release-tag` — annotated vX.Y.Z tag + push
   - `nix build .#release-artifact` — reproducible tarball + .sha256
   - `nix run .#build-pages [-- --include-existing-downloads]` / `nix run .#publish-pages` (refuses PREVIEW_ONLY builds)
-  - `nix run .#release -- --version X.Y.Z [--publish-pages] [--submit-linux-build] [--skip-*]`
+  - `nix run .#release -- --version X.Y.Z [--submit-linux-build] [--skip-*]` (releases trigger the site repo's `refresh-pages` build; release plumbing + ci-clippy/ci-test come from the shared fleet preset `lib.fleet.presets.rust`, ci-fmt stays local for the nixfmt gate)
   - `nix run .#ci-fmt` / `ci-clippy` / `ci-test` — lint gates (also in `.jj-lint.toml`)
 - Build: `cargo build --locked` (or `nix develop -c cargo build`)
 - Run: `cargo run -- starship prompt` to print the prompt for the current repo
