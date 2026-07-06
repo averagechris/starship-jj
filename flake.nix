@@ -92,6 +92,7 @@
         fleetApps = fleet.lib.fleet.presets.rust {
           inherit pkgs self;
           pname = "starship-jj";
+          ciFmt = ci-fmt;
         };
         fleetReleaseArtifact = fleetApps.releaseArtifact system;
         cliProgram = "starship-jj";
@@ -658,6 +659,7 @@
           drv = publish-pages;
         };
         apps.ci-clippy = fleetApps.apps.ci-clippy;
+        apps.static-checks = fleetApps.apps.static-checks;
         apps.ci-test = fleetApps.apps.ci-test;
         apps.prepare-release = fleetApps.apps.prepare-release;
         apps.release = fleetApps.apps.release;
