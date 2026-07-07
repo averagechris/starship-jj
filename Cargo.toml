@@ -45,8 +45,9 @@ tinytemplate = "1.2.1"
 built={version="0.8", features=["git2"]}
 
 [profile.release]
-lto = "fat"
-codegen-units = 1
+# thin LTO with default codegen-units: fat LTO + codegen-units=1 gets the
+# jj-lib compile OOM-killed on the small sr.ht builder (jobs 1814542/1814553).
+lto = "thin"
 strip = "symbols"
 opt-level = "s"
 panic = "abort"
