@@ -93,6 +93,8 @@
           inherit pkgs self;
           pname = "starship-jj";
           ciFmt = ci-fmt;
+          # Requires a SourceHut SSH key secret; optional Tailscale file secret enables tailnet path.
+          thornyRemoteBuilder = true;
         };
         fleetReleaseArtifact = fleetApps.releaseArtifact system;
         cliProgram = "starship-jj";

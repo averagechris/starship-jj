@@ -9,6 +9,10 @@ environment:
     experimental-features = nix-command flakes
     extra-substituters = https://averagechris-dotfiles.cachix.org
     extra-trusted-public-keys = averagechris-dotfiles.cachix.org-1:VwJkl5dG1+xGDY5x884mH/kVwwpgwBAdBKIF3BZiia4=
+    # BEGIN averagechris thorny remote builder Nix config
+    builders = ssh-ng://chris@thorny x86_64-linux - 4 1 kvm,big-parallel -
+    builders-use-substitutes = true
+    # END averagechris thorny remote builder Nix config
 sources:
   - https://git.sr.ht/~averagechris/starship-jj
 secrets:
@@ -17,6 +21,56 @@ tasks:
   - release-artifact: |
       set -eu
       cd starship-jj
+      # BEGIN averagechris thorny remote builder setup
+      thorny_tailscale_auth_key=""
+      if [ -f "$HOME/.ci_secrets/tailscale_auth_key" ]; then
+        thorny_tailscale_auth_key="$(cat "$HOME/.ci_secrets/tailscale_auth_key")"
+      elif [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
+        thorny_tailscale_auth_key="$TAILSCALE_AUTH_KEY"
+      fi
+      if [ -n "$thorny_tailscale_auth_key" ]; then
+        if ! command -v sudo >/dev/null 2>&1; then
+          printf '%s\n' 'warning: sudo is unavailable; cannot start tailscaled for thorny remote builder' >&2
+        elif THORNY_TAILSCALE_AUTH_KEY="$thorny_tailscale_auth_key" nix --option builders "" shell --inputs-from . nixpkgs#tailscale --command sh -eu -c '
+          sock="${TMPDIR:-/tmp}/tailscaled-thorny.sock"
+          log="${TMPDIR:-/tmp}/tailscaled-thorny.log"
+          tailscaled_bin="$(command -v tailscaled)"
+          tailscale_bin="$(command -v tailscale)"
+          sudo "$tailscaled_bin" --state=mem: --socket="$sock" >"$log" 2>&1 &
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            [ -S "$sock" ] && break
+            sleep 1
+          done
+          sudo "$tailscale_bin" --socket="$sock" up --auth-key "$THORNY_TAILSCALE_AUTH_KEY" --hostname "srht-thorny-release" --accept-routes --accept-dns=true
+        '; then
+          printf '%s\n' 'tailscale connected for thorny remote builder' >&2
+        else
+          printf '%s\n' 'warning: tailscale setup failed; continuing without thorny network path' >&2
+        fi
+      else
+        printf '%s\n' 'no Tailscale file secret or TAILSCALE_AUTH_KEY env var found; skipping tailscale setup for thorny remote builder' >&2
+      fi
+      install -d -m 0700 ~/.ssh
+      thorny_identity_file=""
+      if [ -n "${THORNY_BUILDER_SSH_KEY:-}" ]; then
+        thorny_identity_file="$HOME/.ssh/thorny-builder"
+        printf '%s\n' "${THORNY_BUILDER_SSH_KEY}" > "$thorny_identity_file"
+        chmod 0600 "$thorny_identity_file"
+      elif [ -f "$HOME/.ssh/id_rsa" ]; then
+        thorny_identity_file="$HOME/.ssh/id_rsa"
+      else
+        printf '%s\n' 'no SourceHut-managed SSH key found for thorny remote builder' >&2
+      fi
+      if [ -n "$thorny_identity_file" ]; then
+        {
+          printf 'Host %s\n' 'thorny'
+          printf '  IdentityFile %s\n' "$thorny_identity_file"
+          printf '  IdentitiesOnly yes\n'
+          printf '  StrictHostKeyChecking accept-new\n'
+        } >> ~/.ssh/config
+        chmod 0600 ~/.ssh/config
+      fi
+      # END averagechris thorny remote builder setup
       nix build .#release-artifact --out-link result-release-artifact
       mkdir -p ~/artifacts
       cp -p result-release-artifact/* ~/artifacts/
