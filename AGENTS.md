@@ -1,5 +1,5 @@
 # AGENTS: starship-jj Quick Guide
-- Release interface: standard fleet interface (see averagechris.srht.site AGENTS.md); version in Cargo.toml `[package]`, `## Unreleased` in CHANGELOG.md, tags `vX.Y.Z` (legacy unprefixed upstream tags 0.1.0–0.7.0 — leave alone), pages publish to averagechris.srht.site/starship-jj, Linux manifest `builds/release-linux-x86_64.yml` (explicit `hut builds submit` only). Commands:
+- Release interface: standard fleet interface (see averagechris.srht.site AGENTS.md); version in Cargo.toml `[package]`, `## Unreleased` in CHANGELOG.md, tags `vX.Y.Z` (legacy unprefixed upstream tags 0.1.0–0.7.0 — leave alone), pages publish to averagechris.srht.site/starship-jj, Linux manifest `builds/release-linux-x86_64.yml` (explicit `srht builds submit --secrets` only). Commands:
   - `nix run .#prepare-release -- --version X.Y.Z` — bump version, date CHANGELOG, sync builds manifest
   - `nix run .#release-tag` — annotated vX.Y.Z tag + push
   - `nix build .#release-artifact` — reproducible tarball + .sha256
