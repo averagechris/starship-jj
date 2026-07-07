@@ -20,6 +20,12 @@ tasks:
       # builder disk is too small to hold target/ plus the nix build
       # (job 1814375 died with ENOSPC while vendoring).
       rm -rf target ~/.cargo
+      # Reclaim everything unrooted in the nix store too (ci-app closures,
+      # unpacked nixpkgs sources, tarball caches): job 1814606 got within a
+      # final artifact copy of fitting. The package build re-substitutes
+      # what it needs from cachix/cache.nixos.org.
+      nix store gc
+      df -h /
       nix build .#starship-jj --print-build-logs
   - closure-size: |
       cd starship-jj
