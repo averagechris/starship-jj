@@ -1,6 +1,8 @@
 image: nixos/unstable
 arch: x86_64
 environment:
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
   NIX_CONFIG: |
     experimental-features = nix-command flakes
     extra-substituters = https://averagechris-dotfiles.cachix.org
