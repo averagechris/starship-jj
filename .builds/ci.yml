@@ -14,7 +14,13 @@ secrets:
 tasks:
   - static-checks: cd starship-jj && nix run .#static-checks
   - test: cd starship-jj && nix run .#ci-test
-  - package: cd starship-jj && nix build .#starship-jj --print-build-logs
+  - package: |
+      cd starship-jj
+      # Reclaim the cargo debug artifacts from the check tasks first: the
+      # builder disk is too small to hold target/ plus the nix build
+      # (job 1814375 died with ENOSPC while vendoring).
+      rm -rf target ~/.cargo
+      nix build .#starship-jj --print-build-logs
   - closure-size: |
       cd starship-jj
       nix path-info -S ./result
