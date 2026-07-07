@@ -20,7 +20,10 @@ tasks:
       # builder disk is too small to hold target/ plus the nix build
       # (job 1814375 died with ENOSPC while vendoring).
       rm -rf target ~/.cargo
-      nix build .#starship-jj --print-build-logs
+      # --cores 2 caps parallel rustc processes: the release profile
+      # (fat LTO, codegen-units=1) got OOM-killed (SIGKILL, job 1814542)
+      # with full parallelism on the builder's small RAM.
+      nix build .#starship-jj --print-build-logs --cores 2
   - closure-size: |
       cd starship-jj
       nix path-info -S ./result
