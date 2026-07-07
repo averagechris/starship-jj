@@ -44,6 +44,13 @@ tinytemplate = "1.2.1"
 [build-dependencies]
 built={version="0.8", features=["git2"]}
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+opt-level = "s"
+panic = "abort"
+
 [dev-dependencies]
 insta = { version = "1", features = ["filters"] }
 assert_cmd = "2"
