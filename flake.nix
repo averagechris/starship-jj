@@ -91,6 +91,7 @@
         # preset; ci-fmt stays local because it adds the repo's nixfmt gate.
         fleetApps = fleet.lib.fleet.presets.rust {
           inherit pkgs self;
+          srhtPackage = fleet.packages.${system}.srht;
           pname = "starship-jj";
           ciFmt = ci-fmt;
           # Requires a SourceHut SSH key secret; optional Tailscale file secret enables tailnet path.
