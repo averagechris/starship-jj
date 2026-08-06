@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use futures_util::StreamExt as _;
 use jj_cli::{cli_util::RevisionArg, command_error::CommandError, ui::Ui};
 use jj_lib::{index::ResolvedChangeState, repo::Repo};
 #[cfg(feature = "json-schema")]
@@ -193,10 +194,12 @@ impl State {
             let revs = workspace_helper
                 .parse_revset(&Ui::null(), &RevisionArg::from("immutable()".to_string()))?;
 
-            let mut immutable = revs.evaluate_to_commit_ids()?;
+            let immutable = revs.evaluate_to_commit_ids()?;
 
-            data.commit.warnings.immutable =
-                Some(immutable.any(|id| id.as_ref().is_ok_and(|id| id == &commit_id)));
+            let immutable_commit_id = commit_id.clone();
+            data.commit.warnings.immutable = Some(pollster::block_on(immutable.any(move |id| {
+                std::future::ready(id.as_ref().is_ok_and(|id| id == &immutable_commit_id))
+            })));
         }
 
         Ok(())

@@ -8,6 +8,12 @@ app; fork releases are tagged `vX.Y.Z` (upstream tags 0.5.0–0.7.0 are unprefix
 ## Unreleased
 
 
+## v1.0.1 - 2026-08-06
+
+### Changed
+
+- Update Jujutsu compatibility from 0.39 to 0.44 and adapt to its asynchronous APIs.
+- Refresh Rust and Nix dependencies to current stable compatible versions.
 ## v1.0.0 - 2026-07-03
 
 ### Added

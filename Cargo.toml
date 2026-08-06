@@ -1,6 +1,6 @@
 [package]
 name = "starship-jj"
-version = "1.0.0"
+version = "1.0.1"
 description = "starship plugin for jj"
 resolver = "3"
 edition = "2024"
@@ -27,16 +27,17 @@ json-schema = ["dep:schemars", "dep:serde_json"]
 dotenv = ["dep:dotenvy"]
  
 [dependencies]
-unicode-width = "0.2.0"
-jj-lib = "0.39.0"
-jj-cli = "0.39.0"
-clap = "4.5.31"
+unicode-width = "0.2.1"
+jj-lib = "0.44.0"
+jj-cli = "0.44.0"
+clap = { version = "4.6.5", features = ["env"] }
 etcetera = "0.11.0"
-glob = "0.3"
+glob = "0.3.4"
 dotenvy = { version = "0.15", optional = true }
-toml = "0.9"
-pollster = "0.4.0"
-schemars = { version = "1.2.1", optional = true }
+toml = "1.1.4"
+pollster = "1.0.1"
+futures-util = "0.3.33"
+schemars = { version = "1.2.2", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 tinytemplate = "1.2.1"
@@ -53,8 +54,8 @@ opt-level = "s"
 panic = "abort"
 
 [dev-dependencies]
-insta = { version = "1", features = ["filters"] }
-assert_cmd = "2"
-assert_fs = "1"
-regex = "1"
-which = "6"
+insta = { version = "1.48.0", features = ["filters"] }
+assert_cmd = "2.2.2"
+assert_fs = "1.1.4"
+regex = "1.13.1"
+which = "8.0.5"

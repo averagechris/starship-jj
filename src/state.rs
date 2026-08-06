@@ -48,9 +48,11 @@ impl State {
             return Ok(());
         }
         let helper = if self.snapshot {
-            command_helper.workspace_helper(&Ui::null())?
+            command_helper.workspace_helper(&Ui::null()).block_on()?
         } else {
-            command_helper.workspace_helper_no_snapshot(&Ui::null())?
+            command_helper
+                .workspace_helper_no_snapshot(&Ui::null())
+                .block_on()?
         };
         self.workspace_helper = Some(helper);
         Ok(())
@@ -221,8 +223,8 @@ impl State {
         let matcher = FilesetExpression::all().to_matcher();
         let mut copy_records = CopyRecords::default();
         for parent in commit.parent_ids() {
-            let records = get_copy_records(store, parent, commit.id(), &matcher)?;
-            copy_records.add_records(records)?;
+            let records = get_copy_records(store, parent, commit.id(), &matcher).block_on()?;
+            copy_records.add_records(records);
         }
         let tree_diff = parent_tree.diff_stream_with_copies(tree, &matcher, &copy_records);
         let stats = DiffStats::calculate(

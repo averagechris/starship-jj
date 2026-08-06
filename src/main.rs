@@ -23,7 +23,7 @@ pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
-fn starship(
+async fn starship(
     ui: &mut Ui,
     command_helper: &CommandHelper,
     command: CustomCommand,
