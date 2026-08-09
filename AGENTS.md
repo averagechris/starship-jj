@@ -1,11 +1,25 @@
 # AGENTS: starship-jj Quick Guide
-- Release interface: standard fleet interface (see averagechris.srht.site AGENTS.md); version in Cargo.toml `[package]`, `## Unreleased` in CHANGELOG.md, tags `vX.Y.Z` (legacy unprefixed upstream tags 0.1.0–0.7.0 — leave alone), pages publish to averagechris.srht.site/starship-jj, Linux manifest `builds/release-linux-x86_64.yml` (explicit `srht builds submit --secrets` only). Commands:
-  - `nix run .#prepare-release -- --version X.Y.Z` — bump version, date CHANGELOG, sync builds manifest
-  - `nix run .#release-tag` — annotated vX.Y.Z tag + push
-  - `nix build .#release-artifact` — reproducible tarball + .sha256
-  - `nix run .#build-pages [-- --include-existing-downloads]` / `nix run .#publish-pages` (refuses PREVIEW_ONLY builds)
-  - `nix run .#release -- --version X.Y.Z [--submit-linux-build] [--skip-*]` (releases trigger the site repo's `refresh-pages` build; release plumbing + ci-clippy/ci-test come from the shared fleet preset `lib.fleet.presets.rust`, ci-fmt stays local for the nixfmt gate)
-  - `nix run .#ci-fmt` / `ci-clippy` / `ci-test` — lint gates (also in `.jj-lint.toml`)
+- Release interface: version in Cargo.toml `[package]`, `## Unreleased` in
+  CHANGELOG.md, tags `vX.Y.Z` (leave legacy unprefixed upstream tags alone),
+  and Linux manifest `builds/release-linux-x86_64.yml`. Tiny's routine contract
+  is exactly:
+
+    nix run .#release -- --version X.Y.Z --check
+    nix run .#release -- --version X.Y.Z [--submit-linux-build]
+
+  The non-mutating check fails fast on a dirty, stale, or diverged checkout;
+  missing origin or SourceHut authentication; invalid or downgrade versions;
+  and local or remote tag conflicts. Release prepares the versioned tree and
+  validates that prepared tree with preset fmt, clippy, and test gates (ci-fmt
+  keeps the repo's custom nixfmt behavior), then builds and verifies artifacts
+  before atomically publishing `main` and its annotated tag with a lease.
+  Uploads, site refresh, and requested Linux submission are idempotent. After
+  publication, rerun the exact same command to resume; only exact matching
+  version, tag, and main state continues, while mismatches fail closed.
+  Successful publication leaves a new empty `@` above `main`. Lower-level
+  `prepare-release`, `release-tag`, `build-pages`, and `publish-pages` helpers
+  are recovery-only; inspect their help and state before manual use.
+  `nix run .#ci-fmt`, `ci-clippy`, and `ci-test` are also in `.jj-lint.toml`.
 - Build: `cargo build --locked` (or `nix develop -c cargo build`)
 - Run: `cargo run -- starship prompt` to print the prompt for the current repo
 - Tests: unit `just test`; integration `just itest` (needs `jj`); all `just test-all`

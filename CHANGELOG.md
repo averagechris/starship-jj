@@ -7,6 +7,9 @@ app; fork releases are tagged `vX.Y.Z` (upstream tags 0.5.0–0.7.0 are unprefix
 
 ## Unreleased
 
+### Changed
+
+- Adopt the fail-safe, resumable fleet release workflow.
 
 ## v1.0.1 - 2026-08-06
 
