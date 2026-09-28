@@ -29,6 +29,17 @@ starship plugin for jj
 - [x] set custom config location via command line or environment args.
  
 ## Installation
+
+Prebuilt macOS Apple silicon and Linux x86_64 archives are available from the
+[GitHub Releases page](https://github.com/averagechris/starship-jj/releases).
+Older releases remain available from the historical SourceHut project.
+
+With Nix:
+
+```bash
+nix run github:averagechris/starship-jj
+nix profile install github:averagechris/starship-jj
+```
  
 ### From Source
  
@@ -150,3 +161,9 @@ Rationale: Starship invokes this binary frequently; disabling implicit `.env` an
 - Notes for integration tests:
   - Tests initialize repos with `jj git init` and skip if `jj` isn’t available.
   - Tests set `SJJ__MODULE_SEPARATOR="|"` and `SJJ__RESET_COLOR=false` for stable prompt output.
+
+## Releasing
+
+Maintainers should follow [`docs/release.md`](docs/release.md). New releases are
+built on GitHub and published manually; the old SourceHut build manifests are
+archival only.

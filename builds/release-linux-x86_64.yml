@@ -1,3 +1,5 @@
+# ARCHIVAL: historical SourceHut release manifest. Do not submit this manifest
+# for new releases or dual-publish a GitHub release to SourceHut.
 image: nixos/unstable
 arch: x86_64
 oauth: git.sr.ht/OBJECTS:RW git.sr.ht/REPOSITORIES:RO git.sr.ht/PROFILE:RO builds.sr.ht/JOBS:RW builds.sr.ht/SECRETS:RO builds.sr.ht/PROFILE:RO meta.sr.ht/PROFILE:RO

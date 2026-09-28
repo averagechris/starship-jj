@@ -1,3 +1,5 @@
+# ARCHIVAL: legacy SourceHut CI. New release artifacts are built by the
+# read-only GitHub Actions workflow; do not use this file to publish releases.
 image: nixos/unstable
 arch: x86_64
 environment:
