@@ -29,7 +29,7 @@
 - Upstream changes: `just upstream-changes` (deps/locks diffstat + full code diff)
 - LLM review prompt: `just llm-review-upstream` (prints agent prompt + upstream diffs)
 - Supply-chain review: `just llm-review-supply-chain` (prints supply-chain prompt + manifest/lock diffs)
-- Last upstream port: reviewed `main@upstream` through `8ca6a957` (2026-03-17); upstream was not configured during the 2026-08-05 maintenance release, so the next upstream review should still diff from that commit.
+- Upstream reviewed through `74c94705bad6f0f8019db6a4eb093611818dd94a` on 2026-10-09. All three commits after `8ca6a957` are accounted for in `docs/upstream-review.md`; future reviews start after the new cutoff.
 - Ported from upstream after `0.6.0`: `jj`/`jj-cli` 0.39 API updates, flake overlay `prev.stdenv.hostPlatform.system`, RustSec ignore cleanup, snake_case/hex colors, text attrs, commit/change id rendering, `show_previous_if_empty`, metrics `hide_if_empty`, bookmark `ignore_empty_commits`.
 - Upstream gotcha: hex color code had `!h.len() == 7`; this fork uses `hex.len() != 7` and tests wrong-length hex values.
 - Dev helpers: `just fmt`, `just fmt-check`, `just clippy`, `just test`
